@@ -1,0 +1,56 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "CMake: configure",
+      "type": "shell",
+      "command": "cmake",
+      "args": [
+        "-S",
+        "${workspaceFolder}",
+        "-B",
+        "${workspaceFolder}/build",
+        "-DCMAKE_BUILD_TYPE=Debug",
+        "-DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "CMake: build",
+      "type": "shell",
+      "command": "cmake",
+      "args": [
+        "--build",
+        "${workspaceFolder}/build",
+        "--parallel"
+      ],
+      "dependsOn": "CMake: configure",
+      "problemMatcher": ["$gcc"],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "GCN CUDA: test",
+      "type": "shell",
+      "command": "ctest",
+      "args": [
+        "--test-dir",
+        "${workspaceFolder}/build",
+        "--output-on-failure"
+      ],
+      "dependsOn": "CMake: build",
+      "problemMatcher": [],
+      "group": "test"
+    },
+    {
+      "label": "GCN CUDA: benchmark",
+      "type": "shell",
+      "command": "${workspaceFolder}/build/gcn_cuda_benchmark",
+      "dependsOn": "CMake: build",
+      "problemMatcher": []
+    }
+  ]
+}
+
