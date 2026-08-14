@@ -3,7 +3,6 @@
 #include "array"
 #include "cstdint"
 #include "limits"
-#include "stdexcept"
 #include <string>
 #include <stdexcept>
 
@@ -99,6 +98,12 @@ CSRGraph load_binary_graph(const std::filesystem::path& path){
         );
     }
 
+    if (has_edge_features) {
+        io_detail::throw_file_error(
+            path, file_kind, "edge-feature graoh loading is not implemented yet."
+        );
+    }
+
     const std::uint64_t row_ptr_count = io_detail::checked_add(
         num_nodes, 1, path, file_kind, "row_ptr count"
     );
@@ -153,6 +158,75 @@ CSRGraph load_binary_graph(const std::filesystem::path& path){
     // 表示这个optional里面没有denseMatrix
     graph.edge_features = std::nullopt;
     reader.require_end();
+
+    if ( graph.row_ptr.front() != 0){
+        io_detail::throw_file_error(
+            path, file_kind, "row_ptr[0] must be zero"
+        );
+    }
+
+    if (graph.row_ptr.back() != graph.num_edges){
+        io_detail::throw_file_error(
+            path, file_kind, "row_ptr.back() is " + std::to_string(graph.row_ptr.back()) +
+            ", expected num_edges " + std::to_string(graph.num_edges)
+        );
+    }
+
+    for (std::uint64_t v = 0; v < graph.num_nodes; ++v){
+        // 把uint64_t 转成索引类型
+        const std::size_t row = static_cast<std::size_t>(v);
+        const EdgeOffset begin = graph.row_ptr[row];
+        const EdgeOffset end = graph.row_ptr[row+1];
+
+        if(begin > end) {
+            io_detail::throw_file_error(
+                path, file_kind, "row_ptr decreases at row" + std::to_string(v)
+            );
+        }
+
+        if (end > graph.num_edges){
+            io_detail::throw_file_error(
+                path, file_kind, 
+                "row_ptr exceeds num_edges at row " + std::to_string(v)
+            );
+        }
+
+        bool has_previous = false;
+        VertexId previous = 0;
+
+        for (EdgeOffset p = begin; p < end; ++p){
+            const std::size_t edge_index = static_cast<std::size_t>(p);
+            const VertexId u = graph.col_idx[edge_index];
+
+            if (static_cast<std::uint64_t>(u) >= graph.num_nodes ){
+                io_detail::throw_file_error(
+                    path, file_kind, "col_idx[" + std::to_string(p) + "] is outside the vertex range" 
+                );
+            }
+
+            if (static_cast<std::uint64_t>(u) == v){
+                io_detail::throw_file_error(
+                    path, file_kind, "self-loop in row" + std::to_string(v)
+                );
+            }
+
+            if (has_previous && u== previous){
+                io_detail::throw_file_error(
+                    path, file_kind, "duplicate neighbor " + std::to_string(u) + "in row" + std::to_string(v)
+                );
+            }
+
+            if (has_previous && u < previous) {
+                io_detail::throw_file_error(
+                    path, file_kind, "neighbors are not sorted in row " + std::to_string(v)
+                );
+            }
+
+            previous = u;
+            has_previous = true;
+        }
+
+    }
 
     return graph;
 }
