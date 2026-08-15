@@ -14,7 +14,8 @@ endif()
 add_library(gnni_dataset STATIC
   src/graph_types.cpp
   src/dataset.cpp
-  src/dataset_io.cpp)
+  src/dataset_io.cpp
+  src/synthetic_graph.cpp)
 target_include_directories(gnni_dataset PUBLIC include)
 target_compile_features(gnni_dataset PUBLIC cxx_std_17)
 
@@ -46,6 +47,11 @@ if(BUILD_TESTING)
   target_link_libraries(dataset_io_test PRIVATE gnni_dataset)
   target_compile_features(dataset_io_test PRIVATE cxx_std_17)
   add_test(NAME dataset_io COMMAND dataset_io_test)
+
+  add_executable(synthetic_graph_test tests/synthetic_graph_test.cpp)
+  target_link_libraries(synthetic_graph_test PRIVATE gnni_dataset)
+  target_compile_features(synthetic_graph_test PRIVATE cxx_std_17)
+  add_test(NAME synthetic_graph COMMAND synthetic_graph_test)
 
   add_executable(gcn_cuda_test tests/gcn_cuda_test.cu)
   target_link_libraries(gcn_cuda_test PRIVATE gnni_cuda)
