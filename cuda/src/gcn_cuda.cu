@@ -239,16 +239,6 @@ void launch_dense(const float* aggregate, const float* weights, float* output,
 
 }  // namespace
 
-DenseMatrix::DenseMatrix(std::size_t row_count, std::size_t column_count)
-    : rows(row_count),
-      cols(column_count),
-      values(checked_element_count(row_count, column_count, "matrix"), 0.0F) {}
-
-DenseMatrix::DenseMatrix(std::size_t row_count, std::size_t column_count,
-                         std::vector<float> data)
-    : rows(row_count), cols(column_count), values(std::move(data)) {
-  validate_matrix(*this, "matrix");
-}
 
 class CudaGcnContext::Impl {
  public:
