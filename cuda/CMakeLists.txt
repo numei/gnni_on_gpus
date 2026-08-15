@@ -11,62 +11,19 @@ if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
   set(CMAKE_CUDA_ARCHITECTURES native)
 endif()
 
-add_library(gnni_dataset STATIC
-  src/graph_types.cpp
-  src/dataset.cpp
-  src/dataset_io.cpp
-  src/synthetic_graph.cpp)
-target_include_directories(gnni_dataset PUBLIC include)
-target_compile_features(gnni_dataset PUBLIC cxx_std_17)
-
 add_library(gnni_cuda STATIC src/gcn_cuda.cu)
 target_include_directories(gnni_cuda PUBLIC include)
 target_compile_features(gnni_cuda PUBLIC cxx_std_17 cuda_std_17)
-target_link_libraries(gnni_cuda PUBLIC gnni_dataset)
 target_compile_options(gnni_cuda PRIVATE
   $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:CUDA>>:-G;-g>
 )
 
 add_executable(gcn_cuda_benchmark bench/gcn_benchmark.cu)
 target_link_libraries(gcn_cuda_benchmark PRIVATE gnni_cuda)
-add_executable(gnni_dataset_generator apps/dataset_generator.cpp)
-target_link_libraries(gnni_dataset_generator PRIVATE gnni_dataset)
-target_compile_features(gnni_dataset_generator PRIVATE cxx_std_17)
-
-add_executable(gcn_dataset_runner apps/gcn_dataset_runner.cu)
-target_link_libraries(gcn_dataset_runner PRIVATE gnni_cuda)
-target_compile_features(gcn_dataset_runner PRIVATE cxx_std_17 cuda_std_17)
-
-
 target_compile_features(gcn_cuda_benchmark PRIVATE cxx_std_17 cuda_std_17)
 
 include(CTest)
 if(BUILD_TESTING)
-  add_executable(graph_types_test tests/graph_types_test.cpp)
-  target_link_libraries(graph_types_test PRIVATE gnni_dataset)
-  target_compile_features(graph_types_test PRIVATE cxx_std_17)
-  add_test(NAME graph_types COMMAND graph_types_test)
-
-  add_executable(dataset_validation_test tests/dataset_validation_test.cpp)
-  target_link_libraries(dataset_validation_test PRIVATE gnni_dataset)
-  target_compile_features(dataset_validation_test PRIVATE cxx_std_17)
-  add_test(NAME dataset_validation COMMAND dataset_validation_test)
-
-  add_executable(dataset_io_test tests/dataset_io_test.cpp)
-  target_link_libraries(dataset_io_test PRIVATE gnni_dataset)
-  target_compile_features(dataset_io_test PRIVATE cxx_std_17)
-  add_test(NAME dataset_io COMMAND dataset_io_test)
-
-  add_executable(synthetic_graph_test tests/synthetic_graph_test.cpp)
-  target_link_libraries(synthetic_graph_test PRIVATE gnni_dataset)
-  add_executable(synthetic_models_test tests/synthetic_models_test.cpp)
-  target_link_libraries(synthetic_models_test PRIVATE gnni_dataset)
-  target_compile_features(synthetic_models_test PRIVATE cxx_std_17)
-  add_test(NAME synthetic_models COMMAND synthetic_models_test)
-
-  target_compile_features(synthetic_graph_test PRIVATE cxx_std_17)
-  add_test(NAME synthetic_graph COMMAND synthetic_graph_test)
-
   add_executable(gcn_cuda_test tests/gcn_cuda_test.cu)
   target_link_libraries(gcn_cuda_test PRIVATE gnni_cuda)
   target_compile_features(gcn_cuda_test PRIVATE cxx_std_17 cuda_std_17)
@@ -83,13 +40,5 @@ if(BUILD_TESTING)
     COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/tests/check_vscode_config.py)
   add_test(NAME obsolete_smoke_artifacts_absent
     COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/tests/check_no_obsolete_smoke.py)
-  add_test(NAME public_dataset_converter COMMAND python3
-    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_public_converter.py
-    ${CMAKE_CURRENT_SOURCE_DIR}/tools/prepare_public_dataset.py)
-  add_test(NAME dataset_runner_smoke COMMAND python3
-    ${CMAKE_CURRENT_SOURCE_DIR}/tests/check_dataset_runner.py
-    $<TARGET_FILE:gnni_dataset_generator>
-    $<TARGET_FILE:gcn_dataset_runner>)
-
 endif()
 
