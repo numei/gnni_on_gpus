@@ -3,17 +3,69 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <cerrno>
 #include <chrono>
 #include <cstdint>
+#include <cstring>
+#include <exception>
 #include <filesystem>
+#include <fcntl.h>
 #include <fstream>
 #include <functional>
 #include <iostream>
 #include <limits>
 #include <stdexcept>
 #include <string>
+#include <sys/syscall.h>
+#include <thread>
+#include <unistd.h>
 #include <utility>
 #include <vector>
+
+namespace {
+
+std::atomic<bool> install_hook_enabled{false};
+std::atomic<bool> install_hook_reached{false};
+std::atomic<bool> competitor_finished{false};
+std::atomic<bool> competitor_cancelled{false};
+std::string install_hook_target;
+
+void wait_for_competing_create(const char* new_path) noexcept {
+  if (!install_hook_enabled.load(std::memory_order_acquire) ||
+      new_path == nullptr ||
+      std::strcmp(new_path, install_hook_target.c_str()) != 0) {
+    return;
+  }
+  install_hook_reached.store(true, std::memory_order_release);
+  while (!competitor_finished.load(std::memory_order_acquire)) {
+    std::this_thread::yield();
+  }
+}
+
+}  // namespace
+
+extern "C" int rename(const char* old_path, const char* new_path) noexcept {
+  wait_for_competing_create(new_path);
+  return static_cast<int>(::syscall(SYS_renameat, AT_FDCWD, old_path, AT_FDCWD,
+                                    new_path));
+}
+
+extern "C" int renameat2(int old_directory, const char* old_path,
+                          int new_directory, const char* new_path,
+                          unsigned int flags) noexcept {
+  wait_for_competing_create(new_path);
+#ifdef SYS_renameat2
+  return static_cast<int>(::syscall(SYS_renameat2, old_directory, old_path,
+                                    new_directory, new_path, flags));
+#else
+  static_cast<void>(old_directory);
+  static_cast<void>(old_path);
+  static_cast<void>(new_directory);
+  static_cast<void>(flags);
+  errno = ENOSYS;
+  return -1;
+#endif
+}
 
 namespace {
 
@@ -390,6 +442,93 @@ std::vector<Test> make_tests() {
                          "exists");
                      if (read_bytes(path) != sentinel) {
                        throw std::runtime_error("existing output was modified");
+                     }
+                   }});
+  tests.push_back({"does not overwrite a dangling symlink by default", [] {
+                     TestDirectory directory;
+                     const auto path = directory.file("dangling.gnni");
+                     const std::filesystem::path link_value("missing-target");
+                     std::filesystem::create_symlink(link_value, path);
+                     if (std::filesystem::exists(path) ||
+                         !std::filesystem::is_symlink(
+                             std::filesystem::symlink_status(path))) {
+                       throw std::runtime_error(
+                           "dangling-symlink fixture was not created");
+                     }
+                     expect_failure(
+                         [&] { gnni::save_dataset(path, zero_edge_dataset()); },
+                         "exists");
+                     if (!std::filesystem::is_symlink(
+                             std::filesystem::symlink_status(path)) ||
+                         std::filesystem::read_symlink(path) != link_value) {
+                       throw std::runtime_error(
+                           "dangling symlink was replaced or modified");
+                     }
+                   }});
+  tests.push_back({"atomically rejects a concurrently created target", [] {
+                     TestDirectory directory;
+                     const auto path = directory.file("raced.gnni");
+                     const Bytes sentinel{0xca, 0xfe, 0xba, 0xbe};
+
+                     install_hook_target = path.string();
+                     install_hook_reached.store(false,
+                                                std::memory_order_relaxed);
+                     competitor_finished.store(false,
+                                               std::memory_order_relaxed);
+                     competitor_cancelled.store(false,
+                                                std::memory_order_relaxed);
+                     std::exception_ptr competitor_error;
+                     std::thread competitor([&] {
+                       while (!install_hook_reached.load(
+                                  std::memory_order_acquire) &&
+                              !competitor_cancelled.load(
+                                  std::memory_order_acquire)) {
+                         std::this_thread::yield();
+                       }
+                       if (install_hook_reached.load(
+                               std::memory_order_acquire)) {
+                         try {
+                           write_bytes(path, sentinel);
+                         } catch (...) {
+                           competitor_error = std::current_exception();
+                         }
+                       }
+                       competitor_finished.store(true,
+                                                 std::memory_order_release);
+                     });
+                     install_hook_enabled.store(true,
+                                                std::memory_order_release);
+
+                     std::exception_ptr save_error;
+                     try {
+                       gnni::save_dataset(path, zero_edge_dataset());
+                     } catch (...) {
+                       save_error = std::current_exception();
+                     }
+                     competitor_cancelled.store(true,
+                                                std::memory_order_release);
+                     competitor.join();
+                     install_hook_enabled.store(false,
+                                                std::memory_order_release);
+
+                     if (competitor_error != nullptr) {
+                       std::rethrow_exception(competitor_error);
+                     }
+                     if (!install_hook_reached.load(
+                             std::memory_order_acquire)) {
+                       throw std::runtime_error(
+                           "save never reached the atomic install boundary");
+                     }
+                     expect_failure(
+                         [&] {
+                           if (save_error != nullptr) {
+                             std::rethrow_exception(save_error);
+                           }
+                         },
+                         "exists");
+                     if (read_bytes(path) != sentinel) {
+                       throw std::runtime_error(
+                           "concurrently created target was overwritten");
                      }
                    }});
   tests.push_back({"overwrites existing output when requested", [] {

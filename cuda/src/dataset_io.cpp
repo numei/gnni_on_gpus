@@ -6,6 +6,7 @@
 #include <cstring>
 #include <fcntl.h>
 #include <fstream>
+#include <linux/fs.h>
 #include <limits>
 #include <stdexcept>
 #include <string>
@@ -197,6 +198,29 @@ std::filesystem::path temporary_path(const std::filesystem::path& path) {
   return temporary;
 }
 
+void install_temporary(const std::filesystem::path& temporary,
+                       const std::filesystem::path& path, bool overwrite) {
+  if (!overwrite) {
+    if (::renameat2(AT_FDCWD, temporary.c_str(), AT_FDCWD, path.c_str(),
+                    RENAME_NOREPLACE) == 0) {
+      return;
+    }
+    const int saved_errno = errno;
+    if (saved_errno == EEXIST) {
+      throw file_error(path, "output already exists and overwrite is false");
+    }
+    throw file_error(path, "cannot atomically install temporary file: " +
+                               std::string(std::strerror(saved_errno)));
+  }
+
+  std::error_code rename_error;
+  std::filesystem::rename(temporary, path, rename_error);
+  if (rename_error) {
+    throw file_error(path, "cannot rename temporary file into place: " +
+                               rename_error.message());
+  }
+}
+
 }  // namespace
 
 Dataset load_dataset(const std::filesystem::path& path) {
@@ -386,16 +410,6 @@ void save_dataset(const std::filesystem::path& path, const Dataset& dataset,
   const std::uint64_t payload_bytes =
       payload_size(vertices, entries, feature_dim, flags, path);
 
-  std::error_code exists_error;
-  const bool target_exists = std::filesystem::exists(path, exists_error);
-  if (exists_error) {
-    throw file_error(path,
-                     "cannot inspect output path: " + exists_error.message());
-  }
-  if (target_exists && !overwrite) {
-    throw file_error(path, "output already exists and overwrite is false");
-  }
-
   const std::filesystem::path temporary = temporary_path(path);
   const int descriptor = ::open(temporary.c_str(), O_WRONLY | O_CREAT | O_EXCL,
                                 0666);
@@ -458,23 +472,7 @@ void save_dataset(const std::filesystem::path& path, const Dataset& dataset,
                                  std::string(std::strerror(errno)));
     }
 
-    if (!overwrite) {
-      exists_error.clear();
-      if (std::filesystem::exists(path, exists_error)) {
-        throw file_error(path, "output already exists and overwrite is false");
-      }
-      if (exists_error) {
-        throw file_error(path,
-                         "cannot recheck output path: " + exists_error.message());
-      }
-    }
-
-    std::error_code rename_error;
-    std::filesystem::rename(temporary, path, rename_error);
-    if (rename_error) {
-      throw file_error(path, "cannot rename temporary file into place: " +
-                                 rename_error.message());
-    }
+    install_temporary(temporary, path, overwrite);
     owns_temporary = false;
   } catch (...) {
     if (output != nullptr) {
