@@ -1,1 +1,8 @@
 build*/
+data/
+.cache/
+__pycache__/
+*.gnni
+*.gnni.json
+*.tmp-*
+*.zip

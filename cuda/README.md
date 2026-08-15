@@ -123,3 +123,73 @@ compiler-detection checks.
 The Debug task uses `-G -g` for CUDA breakpoints and is not suitable for
 performance measurements. Use the Release commands above for benchmarks.
 
+
+## Dataset pipeline
+
+All prepared graphs use the versioned `.gnni` format. A CSR row is a message
+destination and contains its source vertices. Rows are sorted, duplicate-free,
+and self-loops are stored only when explicitly requested. Generated files,
+downloads, caches, and sidecars under `cuda/data/` are ignored by Git.
+
+Generate the three synthetic graph families:
+
+```bash
+./cuda/build-release/gnni_dataset_generator er \
+  --vertices 10000 --average-degree 16 --features 64 --seed 20260815 \
+  --self-loops --output cuda/data/er-10k.gnni
+./cuda/build-release/gnni_dataset_generator ba \
+  --vertices 100000 --edges-per-new-vertex 8 --features 64 --seed 20260815 \
+  --self-loops --output cuda/data/ba-100k.gnni
+./cuda/build-release/gnni_dataset_generator ws \
+  --vertices 1000000 --neighbors 16 --rewire-probability 0.1 \
+  --features 64 --seed 20260815 --self-loops \
+  --output cuda/data/ws-1m.gnni
+```
+
+Download and convert the public datasets using only Python's standard
+library. Cora has labels but no split in the LINQS archive; ogbn-arxiv keeps
+its official time split. `--make-undirected` is explicit because the source
+edge directions are preserved by default.
+
+```bash
+python3 cuda/tools/prepare_public_dataset.py cora \
+  --make-undirected --self-loops --output cuda/data/cora.gnni
+python3 cuda/tools/prepare_public_dataset.py ogbn-arxiv \
+  --make-undirected --self-loops --keep-cache \
+  --cache-dir cuda/data/cache --output cuda/data/ogbn-arxiv.gnni
+```
+
+Use `--archive FILE` to convert an already downloaded official archive and
+`--force` to intentionally replace an output. Each command writes a JSON
+provenance sidecar containing source/output SHA-256 values or generator
+parameters.
+
+Run deterministic full-batch inference on any prepared dataset:
+
+```bash
+./cuda/build-release/gcn_dataset_runner \
+  --dataset cuda/data/cora.gnni --layer-widths 64,32 \
+  --warmup 5 --iterations 20
+```
+
+The runner reports `key=value` metadata, load and transfer times, kernel and
+end-to-end time, throughput, output shape, and checksum. It uses deterministic
+fixed weights for repeatable performance measurements. Labels and splits are
+preserved in the file, but this runner does not train a classifier and does
+not claim classification accuracy.
+
+### `.gnni` version 1 layout
+
+The 64-byte little-endian header contains `GNNIDAT1`, version `1`, header
+length `64`, flags, a zero reserved word, `N`, CSR entry count `E`, feature
+width `F`, class count, and exact payload bytes. The payload is:
+
+1. `uint64 row_offsets[N+1]`;
+2. `uint32 column_indices[E]`;
+3. row-major `float32 features[N*F]`;
+4. optional `int32 labels[N]`;
+5. optional one-byte splits (`0=none`, `1=train`, `2=valid`, `3=test`).
+
+Flag bits are directed, exact self-loop per vertex, labels present, and splits
+present. The loader rejects unknown flags, inconsistent sizes, malformed CSR,
+non-finite features, invalid labels/splits, truncation, and trailing bytes.

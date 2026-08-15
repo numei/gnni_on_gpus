@@ -4,6 +4,7 @@
 #include <cmath>
 #include <limits>
 #include <stdexcept>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -252,6 +253,150 @@ GeneratedGraph generate_erdos_renyi(int vertices, double probability,
 
   GeneratedGraph generated;
   generated.logical_edges = static_cast<std::uint64_t>(edges.size());
+  generated.graph = build_canonical_graph(vertices, edges, self_loops);
+  return generated;
+}
+
+GeneratedGraph generate_barabasi_albert(int vertices,
+                                        int edges_per_new_vertex,
+                                        std::uint64_t seed,
+                                        bool self_loops) {
+  if (vertices <= 1) {
+    throw std::invalid_argument("BA vertex count must be greater than one");
+  }
+  if (edges_per_new_vertex < 1 || edges_per_new_vertex >= vertices) {
+    throw std::invalid_argument(
+        "BA edges per new vertex must be in [1, vertices)");
+  }
+
+  const std::uint64_t n = static_cast<std::uint64_t>(vertices);
+  const std::uint64_t m =
+      static_cast<std::uint64_t>(edges_per_new_vertex);
+  const std::uint64_t logical_edges =
+      m * (m + 1U) / 2U + m * (n - m - 1U);
+  if (logical_edges > maximum_logical_edges(vertices, self_loops)) {
+    throw std::invalid_argument("BA graph exceeds int offset capacity");
+  }
+
+  std::vector<Edge> edges;
+  edges.reserve(static_cast<std::size_t>(logical_edges));
+  std::vector<int> endpoints;
+  endpoints.reserve(static_cast<std::size_t>(logical_edges * 2U));
+  for (int vertex = 1; vertex <= edges_per_new_vertex; ++vertex) {
+    for (int neighbor = 0; neighbor < vertex; ++neighbor) {
+      edges.emplace_back(vertex, neighbor);
+      endpoints.push_back(vertex);
+      endpoints.push_back(neighbor);
+    }
+  }
+
+  std::mt19937_64 generator(seed);
+  std::vector<int> targets;
+  targets.reserve(static_cast<std::size_t>(edges_per_new_vertex));
+  for (int vertex = edges_per_new_vertex + 1; vertex < vertices; ++vertex) {
+    targets.clear();
+    while (targets.size() < static_cast<std::size_t>(edges_per_new_vertex)) {
+      const int candidate = endpoints[static_cast<std::size_t>(
+          detail::sample_bounded(generator, endpoints.size()))];
+      if (std::find(targets.begin(), targets.end(), candidate) ==
+          targets.end()) {
+        targets.push_back(candidate);
+      }
+    }
+    std::sort(targets.begin(), targets.end());
+    for (int target : targets) {
+      edges.emplace_back(vertex, target);
+    }
+    for (int target : targets) {
+      endpoints.push_back(target);
+      endpoints.push_back(vertex);
+    }
+  }
+
+  GeneratedGraph generated;
+  generated.logical_edges = logical_edges;
+  generated.graph = build_canonical_graph(vertices, edges, self_loops);
+  return generated;
+}
+
+GeneratedGraph generate_watts_strogatz(int vertices, int neighbors,
+                                       double rewire_probability,
+                                       std::uint64_t seed,
+                                       bool self_loops) {
+  if (vertices <= 1) {
+    throw std::invalid_argument("WS vertex count must be greater than one");
+  }
+  if (neighbors <= 0 || neighbors >= vertices || (neighbors % 2) != 0) {
+    throw std::invalid_argument(
+        "WS neighbors must be positive, even, and smaller than vertices");
+  }
+  if (!std::isfinite(rewire_probability) || rewire_probability < 0.0 ||
+      rewire_probability > 1.0) {
+    throw std::invalid_argument(
+        "WS rewiring probability must be finite and in [0,1]");
+  }
+
+  const std::uint64_t logical_edges =
+      static_cast<std::uint64_t>(vertices) *
+      static_cast<std::uint64_t>(neighbors) / 2U;
+  if (logical_edges > maximum_logical_edges(vertices, self_loops)) {
+    throw std::invalid_argument("WS graph exceeds int offset capacity");
+  }
+
+  const auto edge_key = [](int first, int second) {
+    const auto low = static_cast<std::uint32_t>(std::min(first, second));
+    const auto high = static_cast<std::uint32_t>(std::max(first, second));
+    return (static_cast<std::uint64_t>(high) << 32U) | low;
+  };
+
+  std::vector<Edge> oriented_edges;
+  oriented_edges.reserve(static_cast<std::size_t>(logical_edges));
+  std::unordered_set<std::uint64_t> edge_keys;
+  edge_keys.max_load_factor(0.8F);
+  edge_keys.reserve(static_cast<std::size_t>(logical_edges));
+  const int half_neighbors = neighbors / 2;
+  for (int source = 0; source < vertices; ++source) {
+    for (int step = 1; step <= half_neighbors; ++step) {
+      const int target = (source + step) % vertices;
+      oriented_edges.emplace_back(source, target);
+      edge_keys.insert(edge_key(source, target));
+    }
+  }
+
+  if (neighbors != vertices - 1 && rewire_probability > 0.0) {
+    std::mt19937_64 generator(seed);
+    for (Edge& edge : oriented_edges) {
+      if (detail::sample_unit_double(generator) >= rewire_probability) {
+        continue;
+      }
+      const int source = edge.first;
+      const std::uint64_t old_key = edge_key(source, edge.second);
+      edge_keys.erase(old_key);
+      int replacement = source;
+      do {
+        replacement = static_cast<int>(detail::sample_bounded(
+            generator, static_cast<std::uint64_t>(vertices)));
+      } while (replacement == source ||
+               edge_keys.find(edge_key(source, replacement)) !=
+                   edge_keys.end());
+      edge.second = replacement;
+      edge_keys.insert(edge_key(source, replacement));
+    }
+  }
+
+  std::vector<Edge> edges;
+  edges.reserve(oriented_edges.size());
+  for (const Edge& edge : oriented_edges) {
+    edges.emplace_back(std::max(edge.first, edge.second),
+                       std::min(edge.first, edge.second));
+  }
+  std::sort(edges.begin(), edges.end());
+  if (std::adjacent_find(edges.begin(), edges.end()) != edges.end()) {
+    throw std::runtime_error("WS rewiring produced a duplicate edge");
+  }
+
+  GeneratedGraph generated;
+  generated.logical_edges = logical_edges;
   generated.graph = build_canonical_graph(vertices, edges, self_loops);
   return generated;
 }

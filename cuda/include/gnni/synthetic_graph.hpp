@@ -25,6 +25,16 @@ double er_probability_from_average_degree(int vertices,
 GeneratedGraph generate_erdos_renyi(int vertices, double probability,
                                     std::uint64_t seed, bool self_loops);
 
+GeneratedGraph generate_barabasi_albert(int vertices,
+                                        int edges_per_new_vertex,
+                                        std::uint64_t seed,
+                                        bool self_loops);
+
+GeneratedGraph generate_watts_strogatz(int vertices, int neighbors,
+                                       double rewire_probability,
+                                       std::uint64_t seed,
+                                       bool self_loops);
+
 Dataset make_synthetic_dataset(GeneratedGraph graph, std::size_t feature_dim,
                                std::uint64_t feature_seed);
 
