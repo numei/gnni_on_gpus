@@ -11,7 +11,7 @@ if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
   set(CMAKE_CUDA_ARCHITECTURES native)
 endif()
 
-add_library(gnni_dataset STATIC src/graph_types.cpp)
+add_library(gnni_dataset STATIC src/graph_types.cpp src/dataset.cpp)
 target_include_directories(gnni_dataset PUBLIC include)
 target_compile_features(gnni_dataset PUBLIC cxx_std_17)
 
@@ -33,6 +33,11 @@ if(BUILD_TESTING)
   target_link_libraries(graph_types_test PRIVATE gnni_dataset)
   target_compile_features(graph_types_test PRIVATE cxx_std_17)
   add_test(NAME graph_types COMMAND graph_types_test)
+
+  add_executable(dataset_validation_test tests/dataset_validation_test.cpp)
+  target_link_libraries(dataset_validation_test PRIVATE gnni_dataset)
+  target_compile_features(dataset_validation_test PRIVATE cxx_std_17)
+  add_test(NAME dataset_validation COMMAND dataset_validation_test)
 
   add_executable(gcn_cuda_test tests/gcn_cuda_test.cu)
   target_link_libraries(gcn_cuda_test PRIVATE gnni_cuda)
