@@ -11,15 +11,25 @@ if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
   set(CMAKE_CUDA_ARCHITECTURES native)
 endif()
 
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../common
+                 ${CMAKE_BINARY_DIR}/common)
+
 add_library(gnni_cuda STATIC src/gcn_cuda.cu)
 target_include_directories(gnni_cuda PUBLIC include)
 target_compile_features(gnni_cuda PUBLIC cxx_std_17 cuda_std_17)
+target_link_libraries(gnni_cuda PUBLIC gnni::common)
 target_compile_options(gnni_cuda PRIVATE
   $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:CUDA>>:-G;-g>
 )
 
 add_executable(gcn_cuda_benchmark bench/gcn_benchmark.cu)
 target_link_libraries(gcn_cuda_benchmark PRIVATE gnni_cuda)
+
+add_executable(gcn_dataset_runner apps/gcn_dataset_runner.cu)
+target_link_libraries(gcn_dataset_runner PRIVATE gnni_cuda)
+target_compile_features(gcn_dataset_runner PRIVATE cxx_std_17 cuda_std_17)
+
+
 target_compile_features(gcn_cuda_benchmark PRIVATE cxx_std_17 cuda_std_17)
 
 include(CTest)
@@ -40,5 +50,10 @@ if(BUILD_TESTING)
     COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/tests/check_vscode_config.py)
   add_test(NAME obsolete_smoke_artifacts_absent
     COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/tests/check_no_obsolete_smoke.py)
+  add_test(NAME dataset_runner_smoke COMMAND python3
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/check_dataset_runner.py
+    $<TARGET_FILE:gnni_dataset_generator>
+    $<TARGET_FILE:gcn_dataset_runner>)
+
 endif()
 

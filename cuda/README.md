@@ -123,3 +123,23 @@ compiler-detection checks.
 The Debug task uses `-G -g` for CUDA breakpoints and is not suitable for
 performance measurements. Use the Release commands above for benchmarks.
 
+
+## Dataset runner
+
+Dataset creation and the `.gnni` format live in the repository-level
+`common/` module so that both C++ and CUDA implementations can reuse them.
+See `common/README.md` for generation and conversion commands.
+
+Run deterministic full-batch inference on any prepared dataset:
+
+```bash
+./cuda/build-release/gcn_dataset_runner \
+  --dataset common/data/cora.gnni --layer-widths 64,32 \
+  --warmup 5 --iterations 20
+```
+
+The runner reports `key=value` metadata, load and transfer times, kernel and
+end-to-end time, throughput, output shape, and checksum. It uses deterministic
+fixed weights for repeatable performance measurements. Labels and splits are
+preserved in the file, but this runner does not train a classifier and does
+not claim classification accuracy.
