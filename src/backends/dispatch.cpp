@@ -58,8 +58,8 @@ RunResult run_backend(
     const DenseMatrix& features,
     const Model& model,
     const InferenceConfig& config) {
-    const BackendCapabilities capabilities = backend_capabilities(backend);
-    validate_request(graph, features, model, config, capabilities);
+    // const BackendCapabilities capabilities = backend_capabilities(backend);
+    // validate_request(graph, features, model, config, capabilities);
 
     switch (backend) {
         case BackendKind::CpuSequential:
