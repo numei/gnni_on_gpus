@@ -59,16 +59,23 @@ RunResult run_cpu_sequential(
         }
 
         DenseMatrix current = features;
-        // compute_ms: inference_ms包含复制features的时间
+        // inference_ms包含复制features的时间
         std::uint64_t peak_workspace_bytes = dense_payload_bytes(current);
         const auto compute_start = Clock::now();
 
         for (const Layer& layer : model.layers){
+
             DenseMatrix aggregated = cpu_detail::aggregate_mean_sequential(graph, current);
             DenseMatrix transformed = cpu_detail::linear_transform_sequential(aggregated, layer.weights);
 
             cpu_detail::apply_activation_in_place(transformed, layer.activation);
 
+            /*
+                统计峰值工作内存：
+                    在一层计算完成，但局部对象尚未释放时，三分矩阵同时存在
+                    current = N * F_in; aggregated = N * F_in; transformed = N * F_out;
+                    所以该层工作空间大约是： sizeof(float) * N * (2F_in + F_out) bytes
+            */ 
             const std::uint64_t layer_workspcae_bytes = dense_payload_bytes(current) +
                                                         dense_payload_bytes(aggregated) +
                                                         dense_payload_bytes(transformed);
@@ -92,9 +99,11 @@ RunResult run_cpu_sequential(
             inference_end - inference_start
         ).count();
 
+        // 长期输入内存 + 推理过程中最大的临时矩阵内存
         result.metrics.memory.host_bytes =
             persistent_input_bytes(graph, features, model) + peak_workspace_bytes;
 
+        // throughput， 先将毫秒转为秒
         const double compute_seconds =
             result.metrics.timing.compute_ms / 1000.0;
 
