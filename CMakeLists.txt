@@ -73,5 +73,20 @@ if(GNNI_BUILD_TESTS)
     target_link_libraries(test_binary_matrix_loader PRIVATE gnni_core)
 
     add_test(NAME binary_matrix_loader COMMAND test_binary_matrix_loader)
-endif()
 
+    add_executable(test_cpu_sequential
+        tests/test_cpu_sequential.cpp
+    )
+    target_link_libraries(test_cpu_sequential PRIVATE gnni_core)
+
+    add_test(NAME cpu_sequential COMMAND test_cpu_sequential)
+
+    if(OpenMP_CXX_FOUND)
+        add_executable(test_cpu_openmp
+            tests/test_cpu_openmp.cpp
+        )
+        target_link_libraries(test_cpu_openmp PRIVATE gnni_core)
+
+        add_test(NAME cpu_openmp COMMAND test_cpu_openmp)
+    endif()
+endif()
