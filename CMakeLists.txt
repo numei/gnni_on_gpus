@@ -4,23 +4,16 @@ project(gnni_on_gpus LANGUAGES CXX)
 
 option(GNNI_BUILD_TESTS "Build Role A unit tests" ON)
 
-# B/C can provide semicolon-separated CUDA source lists when their backends are
-# ready. Empty lists keep the corresponding unavailable stub in the build.
-set(GNNI_CUDA_VERTEX_SOURCES "" CACHE STRING "Role B CUDA vertex source files")
-set(GNNI_CUDA_EDGE_SOURCES "" CACHE STRING "Role C CUDA edge source files")
-
 add_library(gnni_core STATIC
     src/io/matrix_loader.cpp
     src/io/graph_loader.cpp
     src/io/model_loader.cpp
     src/io/text_token_reader.cpp
-    src/core/validation.cpp
     src/core/compare.cpp
     src/backends/cpu_kernels.cpp
     src/backends/cpu_sequential.cpp
     src/backends/cpu_openmp.cpp
     src/backends/dispatch.cpp
-    src/backends/cuda_unavailable.cpp
     src/benchmark/runner.cpp
     src/benchmark/report.cpp
 )
@@ -37,18 +30,6 @@ find_package(OpenMP QUIET COMPONENTS CXX)
 if(OpenMP_CXX_FOUND)
     target_link_libraries(gnni_core PUBLIC OpenMP::OpenMP_CXX)
     target_compile_definitions(gnni_core PUBLIC GNNI_HAS_OPENMP=1)
-endif()
-
-if(GNNI_CUDA_VERTEX_SOURCES)
-    enable_language(CUDA)
-    target_sources(gnni_core PRIVATE ${GNNI_CUDA_VERTEX_SOURCES})
-    target_compile_definitions(gnni_core PRIVATE GNNI_WITH_CUDA_VERTEX=1)
-endif()
-
-if(GNNI_CUDA_EDGE_SOURCES)
-    enable_language(CUDA)
-    target_sources(gnni_core PRIVATE ${GNNI_CUDA_EDGE_SOURCES})
-    target_compile_definitions(gnni_core PRIVATE GNNI_WITH_CUDA_EDGE=1)
 endif()
 
 if(MSVC)
@@ -88,5 +69,38 @@ if(GNNI_BUILD_TESTS)
         target_link_libraries(test_cpu_openmp PRIVATE gnni_core)
 
         add_test(NAME cpu_openmp COMMAND test_cpu_openmp)
+    endif()
+
+    add_executable(test_cli_options
+        tests/test_cli_options.cpp
+        src/cli/cli_options.cpp
+    )
+    target_link_libraries(test_cli_options PRIVATE gnni_core)
+    target_include_directories(
+        test_cli_options
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/cli"
+    )
+
+    add_test(NAME cli_options COMMAND test_cli_options)
+
+    add_executable(test_benchmark_report
+        tests/test_benchmark_report.cpp
+    )
+    target_link_libraries(test_benchmark_report PRIVATE gnni_core)
+
+    add_test(NAME benchmark_report COMMAND test_benchmark_report)
+
+    if(OpenMP_CXX_FOUND)
+        add_executable(test_cli_end_to_end
+            tests/test_cli_end_to_end.cpp
+            src/cli/cli_options.cpp
+        )
+        target_link_libraries(test_cli_end_to_end PRIVATE gnni_core)
+        target_include_directories(
+            test_cli_end_to_end
+            PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/cli"
+        )
+
+        add_test(NAME cli_end_to_end COMMAND test_cli_end_to_end)
     endif()
 endif()

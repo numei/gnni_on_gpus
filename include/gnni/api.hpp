@@ -31,17 +31,12 @@ struct TimingMetrics {
     // Time spent executing the graph/model computation.
     double compute_ms = 0.0;
 
-    // GPU-specific fields remain empty for CPU backends.
-    std::optional<double> host_to_device_ms;
-    std::optional<double> device_to_host_ms;
-
     // Complete backend invocation, excluding file loading and CLI parsing.
     double inference_ms = 0.0;
 };
 
 struct MemoryMetrics {
     std::uint64_t host_bytes = 0;
-    std::optional<std::uint64_t> device_bytes;
 };
 
 struct RunMetrics {
@@ -74,26 +69,6 @@ struct ComparisonReport {
     std::optional<std::uint64_t> first_mismatch_index;
 };
 
-/** Validate invariants that involve only one CSRGraph object. */
-void validate_graph(const CSRGraph& graph);
-
-/** Validate a feature matrix and its node-count relationship with the graph. */
-void validate_features(const CSRGraph& graph, const DenseMatrix& features);
-
-/** Validate model storage, activations, and layer-to-layer dimensions. */
-void validate_model(const DenseMatrix& features, const Model& model);
-
-/**
- * Validate one complete inference request and the selected backend's declared
- * capabilities. Call this before allocating large CPU or GPU buffers.
- */
-void validate_request(
-    const CSRGraph& graph,
-    const DenseMatrix& features,
-    const Model& model,
-    const InferenceConfig& config,
-    const BackendCapabilities& capabilities);
-
 /**
  * Compare two row-major outputs using absolute plus relative tolerance.
  * Shape mismatch is reported rather than treated as element-wise mismatch.
@@ -112,24 +87,6 @@ RunResult run_cpu_sequential(
 
 /** Run the node-parallel OpenMP backend using config's thread settings. */
 RunResult run_cpu_openmp(
-    const CSRGraph& graph,
-    const DenseMatrix& features,
-    const Model& model,
-    const InferenceConfig& config);
-
-/**
- * Run Role B's vertex-centric CUDA backend. No CUDA type crosses this API.
- */
-RunResult run_cuda_vertex(
-    const CSRGraph& graph,
-    const DenseMatrix& features,
-    const Model& model,
-    const InferenceConfig& config);
-
-/**
- * Run Role C's edge-centric or agreed alternative CUDA backend.
- */
-RunResult run_cuda_edge(
     const CSRGraph& graph,
     const DenseMatrix& features,
     const Model& model,

@@ -18,8 +18,7 @@ enum class InputFileFormat {
 /**
  * Load a CSR graph and its optional edge-feature matrix.
  *
- * The loader performs file-local validation. Cross-object checks against node
- * features and model dimensions are performed by validate_request().
+ * The loader performs file-local validation.
  *
  * @throws std::runtime_error if the file cannot be read or is malformed.
  */

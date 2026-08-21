@@ -76,10 +76,6 @@ enum class BackendKind {
     CpuSequential,
     /// Role A's node-parallel OpenMP implementation.
     CpuOpenMP,
-    /// Public dispatch identifier for Role B's CUDA implementation.
-    CudaVertex,
-    /// Public dispatch identifier for Role C's CUDA implementation.
-    CudaEdge,
 };
 
 enum class OpenMPScheduleKind {

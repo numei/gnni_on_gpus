@@ -36,10 +36,9 @@ CliOptions parse_cli(int argc, const char* const argv[]);
 void print_help(std::ostream& output);
 
 /**
- * Run the complete host workflow: parse, load, validate, benchmark, optionally
- * verify, and report. Returns a process exit code and does not call exit().
+ * Run the complete host workflow: parse, load, benchmark, optionally verify,
+ * and report. Returns a process exit code and does not call exit().
  */
 int run_cli(int argc, const char* const argv[]);
 
 }  // namespace gnni::cli
-

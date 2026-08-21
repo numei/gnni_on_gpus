@@ -9,8 +9,8 @@
 namespace gnni {
 
 struct BenchmarkOptions {
-    std::uint32_t warmup_runs = 1;
-    std::uint32_t measured_runs = 5;
+    std::uint32_t warmup_runs = 1; // 不记录
+    std::uint32_t measured_runs = 5; // 记录
 };
 
 struct MetricSummary {
@@ -22,6 +22,7 @@ struct MetricSummary {
 
 struct BenchmarkReport {
     BackendKind backend = BackendKind::CpuSequential;
+    InferenceConfig inference;
     BenchmarkOptions options;
     std::vector<RunMetrics> samples;
     MetricSummary compute_ms;

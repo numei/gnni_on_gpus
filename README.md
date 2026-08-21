@@ -1,15 +1,15 @@
-# gnni_on_gpus
+# GNNI — Role A CPU Inference
 
-Graph Neural Network Inference on GPUs(prof.quer 1st)
+This repository contains the Role A implementation of a full-batch GNN inference baseline:
 
-Role A 的设计、数学语义和实现顺序见
-[`docs/semantic_contract.md`](docs/semantic_contract.md)，磁盘格式见
-[`docs/file_formats.md`](docs/file_formats.md)。当前仓库已搭好 Role A 的 C++17
-模块骨架；除 binary dense-matrix loader 外，带 `TODO(Role A)` 的函数仍需实现。
-推荐实现顺序见
-[`docs/role_a_implementation_checklist.md`](docs/role_a_implementation_checklist.md)。
+- versioned binary graph, feature, and model loading;
+- sequential CPU inference as the correctness reference;
+- OpenMP CPU inference;
+- output comparison, benchmark summaries, text/CSV reporting, and CLI orchestration.
 
-## Build the framework
+The mathematical and data-layout choices are explained in [docs/semantic_contract.md](docs/semantic_contract.md). The on-disk binary formats are specified in [docs/file_formats.md](docs/file_formats.md).
+
+## Build and test
 
 ```text
 cmake -S . -B build
@@ -17,6 +17,34 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-未接入 B/C 的 CUDA 源文件时，CUDA backend 会明确报告 unavailable。B/C 接入方式
-记录在根目录 `CMakeLists.txt` 的 `GNNI_CUDA_VERTEX_SOURCES` 和
-`GNNI_CUDA_EDGE_SOURCES` cache variables 中。
+## Run
+
+```text
+./build/gnni \
+  --graph graph.gnnigraph \
+  --features features.gnnimatrix \
+  --model model.gnnimodel \
+  --backend cpu \
+  --repeat 5 --verify
+```
+
+To use the OpenMP implementation instead:
+
+```text
+./build/gnni --graph graph.gnnigraph --features features.gnnimatrix \
+  --model model.gnnimodel --backend omp --threads 4 --schedule static
+```
+
+Use `--help` for the complete list of options. Binary input is the implemented baseline; text fixtures remain a future convenience feature.
+
+## Current baseline
+
+- Full-batch mean-aggregation GCN inference.
+- CSR rows store incoming neighbours: an entry in row `v` represents an edge `(u -> v)`.
+- Only explicit neighbours are averaged; no self-loops are inserted.
+- A node with zero in-degree receives an all-zero aggregate.
+- Dense matrices and weights use row-major `float32` storage.
+- Hidden layers use ReLU; the final layer uses Identity and returns logits/embeddings.
+- `cpu` is the sequential reference; `omp` is checked against it.
+
+Softmax, edge features, and attention are deliberately optional extensions. They are not required to run the baseline.

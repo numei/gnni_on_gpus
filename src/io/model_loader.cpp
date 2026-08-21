@@ -54,7 +54,7 @@ namespace {
         const std::uint32_t flags = reader.read_u32("flags");
         const std::uint32_t layer_descriptor_bytes = reader.read_u32("layer_descriptor_bytes");
         const std::uint32_t reserved_0 = reader.read_u32("reserved_0");
-        const std::uint32_t reserved_1 = reader.read_u32("reserved_1");
+        const std::uint64_t reserved_1 = reader.read_u64("reserved_1");
         
         // 验证header
         if (version != format_version){
@@ -297,4 +297,3 @@ Model load_model(const std::filesystem::path& path, InputFileFormat format) {
 }
 
 }  // namespace gnni
-
