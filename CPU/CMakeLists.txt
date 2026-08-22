@@ -8,7 +8,6 @@ add_library(gnni_core STATIC
     src/io/matrix_loader.cpp
     src/io/graph_loader.cpp
     src/io/model_loader.cpp
-    src/io/text_token_reader.cpp
     src/core/compare.cpp
     src/backends/cpu_kernels.cpp
     src/backends/cpu_sequential.cpp
@@ -54,6 +53,13 @@ if(GNNI_BUILD_TESTS)
     target_link_libraries(test_binary_matrix_loader PRIVATE gnni_core)
 
     add_test(NAME binary_matrix_loader COMMAND test_binary_matrix_loader)
+
+    add_executable(test_graph_loader
+        tests/test_graph_loader.cpp
+    )
+    target_link_libraries(test_graph_loader PRIVATE gnni_core)
+
+    add_test(NAME graph_loader COMMAND test_graph_loader)
 
     add_executable(test_cpu_sequential
         tests/test_cpu_sequential.cpp

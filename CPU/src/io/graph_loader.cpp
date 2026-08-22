@@ -100,7 +100,7 @@ CSRGraph load_binary_graph(const std::filesystem::path& path){
 
     if (has_edge_features) {
         io_detail::throw_file_error(
-            path, file_kind, "edge-feature graoh loading is not implemented yet."
+            path, file_kind, "edge-feature graph loading is not implemented yet"
         );
     }
 
@@ -240,16 +240,7 @@ bool has_binary_graph_magic(
 
 } // namespace
 
-/**
- * TODO(Role A): implement the graph loader described in docs/file_formats.md.
- *
- * Suggested implementation order:
- * 1. Detect or validate the requested format.
- * 2. Decode header fields using BinaryReader for binary input.
- * 3. Check all size arithmetic before allocating vectors.
- * 4. Read row_ptr, col_idx, and optional edge features.
- * 5. Enforce file-local CSR invariants before returning.
- */
+/** Load a graph using the selected format or binary magic detection. */
 CSRGraph load_graph(const std::filesystem::path& path, InputFileFormat format) {
     switch (format)
     {
@@ -258,7 +249,7 @@ CSRGraph load_graph(const std::filesystem::path& path, InputFileFormat format) {
     
     case InputFileFormat::Text:
         throw std::logic_error(
-            "graph text loader is not implement"
+            "graph text loader is not implemented"
         );
     case InputFileFormat::Auto:
         if (has_binary_graph_magic(path)){
@@ -267,7 +258,7 @@ CSRGraph load_graph(const std::filesystem::path& path, InputFileFormat format) {
         io_detail::throw_file_error(path, "graph", "unrecognized format or text loader not implemented");
     }
 
-    io_detail::throw_file_error(path, "graph", "Invalid InputFileFormat");
+    io_detail::throw_file_error(path, "graph", "invalid InputFileFormat");
 }
 
 }  // namespace gnni

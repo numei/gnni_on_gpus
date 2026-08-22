@@ -21,7 +21,7 @@ BackendCapabilities backend_capabilities(BackendKind backend) noexcept {
         case BackendKind::CpuSequential:
             capabilities.available = true;
             capabilities.mean_aggregation = true;
-            // TODO(Role A): set softmax=true only after common stable softmax
+            // Optional extension: set softmax=true only after stable softmax
             // post-processing has been implemented and tested.
             return capabilities;
         case BackendKind::CpuOpenMP:

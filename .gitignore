@@ -4,10 +4,11 @@
 *.ptx
 *.cubin
 *.fatbin
-build/
+build*/
 out/
 *.exe
 *.obj
 *.o
 *.a
 *.lib
+*.pdb

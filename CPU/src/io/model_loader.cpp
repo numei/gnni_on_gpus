@@ -269,13 +269,7 @@ namespace {
     }
 }
 
-/**
- * TODO(Role A): implement the model loader described in docs/file_formats.md.
- *
- * Parse all layer descriptors before allocating weight payloads. Validate
- * descriptor sizes, activation codes, adjacent dimensions, checked weight
- * counts, finite values, and exact end-of-file.
- */
+/** Load a model using the selected format or binary magic detection. */
 Model load_model(const std::filesystem::path& path, InputFileFormat format) {
     switch (format){
         case InputFileFormat::Binary:
@@ -290,7 +284,7 @@ Model load_model(const std::filesystem::path& path, InputFileFormat format) {
             }
 
             io_detail::throw_file_error(
-                path, "model", "unrecognized formate or text loader not implemented"
+                path, "model", "unrecognized format or text loader not implemented"
             );
     }
     throw std::logic_error("invalid InputFileFormat value");

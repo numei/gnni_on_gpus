@@ -32,7 +32,7 @@ To use the OpenMP implementation instead:
 
 ```text
 ./build/gnni --graph graph.gnnigraph --features features.gnnimatrix \
-  --model model.gnnimodel --backend omp --threads 4 --schedule static
+  --model model.gnnimodel --backend omp --threads 4 --omp-schedule static
 ```
 
 Use `--help` for the complete list of options. Binary input is the implemented baseline; text fixtures remain a future convenience feature.

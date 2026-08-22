@@ -5,7 +5,7 @@
 - [x] C++17 CMake build with optional OpenMP support.
 - [x] Public graph, dense-matrix, model, inference, and benchmark types.
 - [x] Versioned binary dense-matrix loader with checked-size and finite-value checks.
-- [x] Versioned binary CSR graph loader with local CSR checks and optional edge-feature payload loading.
+- [x] Versioned binary CSR graph loader with local CSR checks; optional edge-feature payloads are explicitly rejected until implemented.
 - [x] Versioned binary model loader with descriptor, activation, weight-size, and finite-value checks.
 - [x] Sequential CPU mean-GCN inference.
 - [x] OpenMP CPU inference with thread and schedule configuration.
