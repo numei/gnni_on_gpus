@@ -1,0 +1,4 @@
+{
+    "cmake.sourceDirectory": "${workspaceFolder}/CPU",
+    "cmake.buildDirectory": "${workspaceFolder}/CPU/build_vscode"
+}
