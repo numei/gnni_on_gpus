@@ -36,9 +36,14 @@ struct GcnRunResult {
   CudaTimings timings;
 };
 
+struct CudaKernelOptions {
+  bool edge_centric = false;
+  bool tiled_dense = false;
+};
+
 class CudaGcnContext {
  public:
-  explicit CudaGcnContext(const CSRGraph& graph);
+  explicit CudaGcnContext(const CSRGraph& graph, CudaKernelOptions options = {});
   ~CudaGcnContext();
 
   CudaGcnContext(const CudaGcnContext&) = delete;
@@ -56,6 +61,7 @@ class CudaGcnContext {
       const std::vector<GcnLayerConfig>& layer_configs);
 
   float graph_upload_ms() const noexcept;
+  std::size_t device_bytes() const noexcept;
 
  private:
   class Impl;

@@ -117,13 +117,13 @@ void test_valid_binary_and_auto_detection() {
     const std::vector<float> expected{1.0F, -2.0F, 3.5F, 4.0F, 5.0F, 6.0F};
     write_matrix_file(file.path(), 1, 2, 3, expected);
 
-    const gnni::DenseMatrix matrix = gnni::load_dense_matrix(file.path());
+    const gnni_cpu::DenseMatrix matrix = gnni_cpu::load_dense_matrix(file.path());
     require(matrix.rows == 2, "valid matrix rows mismatch");
     require(matrix.cols == 3, "valid matrix cols mismatch");
     require(matrix.values == expected, "valid matrix values mismatch");
 
-    const gnni::DenseMatrix explicit_binary =
-        gnni::load_dense_matrix(file.path(), gnni::InputFileFormat::Binary);
+    const gnni_cpu::DenseMatrix explicit_binary =
+        gnni_cpu::load_dense_matrix(file.path(), gnni_cpu::InputFileFormat::Binary);
     require(explicit_binary.values == expected, "explicit binary load mismatch");
 }
 
@@ -132,7 +132,7 @@ void test_truncated_payload() {
     TemporaryFile file("truncated_matrix");
     write_matrix_file(file.path(), 1, 2, 3, {1.0F, 2.0F, 3.0F, 4.0F, 5.0F});
     expect_runtime_error(
-        [&] { static_cast<void>(gnni::load_dense_matrix(file.path())); },
+        [&] { static_cast<void>(gnni_cpu::load_dense_matrix(file.path())); },
         "truncated payload");
 }
 
@@ -142,7 +142,7 @@ void test_trailing_payload() {
     write_matrix_file(
         file.path(), 1, 1, 1, {1.0F}, true);
     expect_runtime_error(
-        [&] { static_cast<void>(gnni::load_dense_matrix(file.path())); },
+        [&] { static_cast<void>(gnni_cpu::load_dense_matrix(file.path())); },
         "trailing payload");
 }
 
@@ -151,7 +151,7 @@ void test_unsupported_version() {
     TemporaryFile file("version_matrix");
     write_matrix_file(file.path(), 2, 1, 1, {1.0F});
     expect_runtime_error(
-        [&] { static_cast<void>(gnni::load_dense_matrix(file.path())); },
+        [&] { static_cast<void>(gnni_cpu::load_dense_matrix(file.path())); },
         "unsupported version");
 }
 
@@ -161,7 +161,7 @@ void test_non_finite_payload() {
     write_matrix_file(
         file.path(), 1, 1, 1, {std::numeric_limits<float>::quiet_NaN()});
     expect_runtime_error(
-        [&] { static_cast<void>(gnni::load_dense_matrix(file.path())); },
+        [&] { static_cast<void>(gnni_cpu::load_dense_matrix(file.path())); },
         "non-finite payload");
 }
 
@@ -175,7 +175,7 @@ void test_dimension_overflow() {
         2,
         {});
     expect_runtime_error(
-        [&] { static_cast<void>(gnni::load_dense_matrix(file.path())); },
+        [&] { static_cast<void>(gnni_cpu::load_dense_matrix(file.path())); },
         "dimension overflow");
 }
 

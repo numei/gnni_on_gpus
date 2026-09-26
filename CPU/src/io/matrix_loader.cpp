@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <string>
 
-namespace gnni {
+namespace gnni_cpu {
 namespace {
 
 constexpr std::array<std::uint8_t, 8> matrix_magic{
@@ -124,4 +124,4 @@ DenseMatrix load_dense_matrix(
     io_detail::throw_file_error(path, "dense-matrix", "invalid InputFileFormat value");
 }
 
-}  // namespace gnni
+}  // namespace gnni_cpu

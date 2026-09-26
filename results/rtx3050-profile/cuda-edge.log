@@ -1,0 +1,9 @@
+==PROF== Connected to process 27156 (X:\Polito-computer-engineering\system-device\gnni_on_gpus\build-cuda-ninja\gnni_q1.exe)
+==PROF== Profiling "aggregate_edge_feature_kernel" - 0 (1/8): 0%....50%....100% - 8 passes
+==PROF== Profiling "dense_transform_kernel" - 1 (2/8): 0%....50%....100% - 8 passes
+==PROF== Profiling "aggregate_edge_feature_kernel" - 2 (3/8): 0%....50%....100% - 8 passes
+==PROF== Profiling "dense_transform_kernel" - 3 (4/8): 0%....50%....100% - 8 passes
+dataset,backend,aggregation,vertices,edges,features,layer_widths,layers,seed,threads,schedule,sample,warmup,verified,max_abs_error,load_ms,setup_ms,graph_h2d_ms,compute_ms,end_to_end_ms,h2d_ms,d2h_ms,nodes_per_second,edges_per_second,host_payload_bytes,device_payload_bytes,max_degree,degree_cv,checksum
+"X:\Polito-computer-engineering\system-device\gnni_on_gpus\tmp\q1-data\ba-n100000-f16-seed42.gnni",cuda-edge,mean,100000,1699928,16,16;8,2,42,0,static,0,0,false,0,174.2483,1111.2643,3.82716798782,648.766479492,653.674682617,1.98585605621,0.890591979027,152981.295833,2600571.88263,23204324,33200964,1381,1.3920705463,1812.46685243
+==PROF== Disconnected from process 27156
+==PROF== Report: X:\Polito-computer-engineering\system-device\gnni_on_gpus\results\rtx3050-profile\cuda-edge.ncu-rep

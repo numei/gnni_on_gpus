@@ -1,0 +1,17 @@
+backend,kernel,duration_us,sm_pct,dram_pct,registers,shared_bytes
+cuda-edge,aggregate_edge_feature_kernel,3321.024,49.760827,19.105672,21.0,0.0
+cuda-edge,dense_transform_kernel,332.192,89.774192,21.924176,35.0,0.0
+cuda-edge,aggregate_edge_feature_kernel,3325.7279999999996,50.053395,19.082332,21.0,0.0
+cuda-edge,dense_transform_kernel,168.736,88.414571,33.08653,35.0,0.0
+cuda-edge-tiled,aggregate_edge_feature_kernel,3326.976,49.764462,18.992301,21.0,0.0
+cuda-edge-tiled,dense_tiled_kernel,269.92,87.513451,26.745673,40.0,2048.0
+cuda-edge-tiled,aggregate_edge_feature_kernel,3325.888,49.990891,18.968134,21.0,0.0
+cuda-edge-tiled,dense_tiled_kernel,270.88,87.454038,20.491817,40.0,2048.0
+cuda-tiled,aggregate_vertex_feature_kernel,859.968,48.786836,64.679713,40.0,0.0
+cuda-tiled,dense_tiled_kernel,270.112,87.510047,26.92316,40.0,2048.0
+cuda-tiled,aggregate_vertex_feature_kernel,856.864,48.845126,64.744344,40.0,0.0
+cuda-tiled,dense_tiled_kernel,270.464,86.957642,20.613087,40.0,2048.0
+cuda-vertex,aggregate_vertex_feature_kernel,857.728,48.756059,64.71678,40.0,0.0
+cuda-vertex,dense_transform_kernel,332.352,89.76035,21.991712,35.0,0.0
+cuda-vertex,aggregate_vertex_feature_kernel,858.112,48.829797,64.653826,40.0,0.0
+cuda-vertex,dense_transform_kernel,168.736,88.280504,33.11362,35.0,0.0

@@ -2,7 +2,7 @@
 
 #include "gnni/types.hpp"
 
-namespace gnni::cpu_detail {
+namespace gnni_cpu::cpu_detail {
 
 /**
  * Compute PDF-style mean aggregation for every destination node.
@@ -12,7 +12,8 @@ namespace gnni::cpu_detail {
  */
 DenseMatrix aggregate_mean_sequential(
     const CSRGraph& graph,
-    const DenseMatrix& input);
+    const DenseMatrix& input,
+    AggregationKind aggregation = AggregationKind::Mean);
 
 /**
  * Compute output = input * weights using row-major matrices.
@@ -26,5 +27,5 @@ DenseMatrix linear_transform_sequential(
 /** Apply Identity or ReLU to every matrix element in place. */
 void apply_activation_in_place(DenseMatrix& matrix, ActivationKind activation);
 
-}  // namespace gnni::cpu_detail
+}  // namespace gnni_cpu::cpu_detail
 

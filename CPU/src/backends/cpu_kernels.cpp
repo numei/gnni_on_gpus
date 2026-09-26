@@ -1,12 +1,13 @@
 #include "cpu_kernels.hpp"
 
 #include <stdexcept>
+#include <cmath>
 
-namespace gnni::cpu_detail {
+namespace gnni_cpu::cpu_detail {
 
 DenseMatrix aggregate_mean_sequential(
     const CSRGraph& graph,
-    const DenseMatrix& input) {
+    const DenseMatrix& input, AggregationKind aggregation) {
         // input指当前这一层所有节点的特征，shape = N * F_in
         const std::size_t node_count = static_cast<std::size_t>(graph.num_nodes);
         const std::size_t feature_count = static_cast<std::size_t>(input.cols);
@@ -53,7 +54,12 @@ DenseMatrix aggregate_mean_sequential(
                     const std::size_t input_index = static_cast<std::size_t>(source) * feature_count + feature;
 
                     // 把每个source节点的同一个feature，累加到destination对应的同一个feature上
-                    output.values[output_index] += input.values[input_index];
+                    float scale = 1.0F;
+                    if (aggregation == AggregationKind::SymmetricGcn) {
+                        const auto other_degree = graph.row_ptr[source+1] - graph.row_ptr[source];
+                        scale = other_degree == 0 ? 0.0F : 1.0F / std::sqrt(float(degree) * float(other_degree));
+                    }
+                    output.values[output_index] += scale * input.values[input_index];
                 }
             }
 
@@ -69,7 +75,7 @@ DenseMatrix aggregate_mean_sequential(
             */ 
             for (std::size_t feature = 0; feature < feature_count; ++feature){
                 const std::size_t output_index = destination * feature_count + feature;
-                output.values[output_index] /= degree_as_float;
+                if (aggregation == AggregationKind::Mean) output.values[output_index] /= degree_as_float;
             }
         }
         return output;
@@ -125,5 +131,5 @@ void apply_activation_in_place(DenseMatrix& matrix, ActivationKind activation) {
     throw std::invalid_argument("invalid ActivationKind value");
 }
 
-}  // namespace gnni::cpu_detail
+}  // namespace gnni_cpu::cpu_detail
 

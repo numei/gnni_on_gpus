@@ -31,7 +31,8 @@ if(BUILD_TESTING)
     add_test(NAME ${test_name} COMMAND ${test_name}_test)
   endforeach()
 
-  add_test(NAME public_dataset_converter COMMAND python3
+  find_package(Python3 COMPONENTS Interpreter REQUIRED)
+  add_test(NAME public_dataset_converter COMMAND ${Python3_EXECUTABLE}
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_public_converter.py
     ${CMAKE_CURRENT_SOURCE_DIR}/tools/prepare_public_dataset.py)
 endif()

@@ -1,5 +1,12 @@
 # CUDA vertex-centric GCN baseline
 
+Integration update: the root `gnni_q1` CLI adds selectable edge aggregation
+and tiled dense kernels, shared CPU/GPU verification, external model loading
+and consistent end-to-end throughput. See `../README.txt` and
+`../DOCUMENTATION.md`. The commands and timings below describe the legacy
+baseline executable. The integration was also tested with CUDA 12.6 on an
+RTX 3050; RTX 50-series requires a toolkit supporting its architecture.
+
 This directory contains the role-2 CUDA baseline for full-batch GCN inference.
 It keeps a static CSR graph and reusable inference workspaces on the GPU,
 separates neighbor aggregation from dense transformation, and provides CUDA

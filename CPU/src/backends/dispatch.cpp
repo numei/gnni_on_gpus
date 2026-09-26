@@ -2,7 +2,7 @@
 
 #include <stdexcept>
 
-namespace gnni {
+namespace gnni_cpu {
 
 const char* backend_name(BackendKind backend) noexcept {
     switch (backend) {
@@ -49,4 +49,4 @@ RunResult run_backend(
     throw std::invalid_argument("invalid BackendKind value");
 }
 
-}  // namespace gnni
+}  // namespace gnni_cpu

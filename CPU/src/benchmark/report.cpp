@@ -8,7 +8,7 @@
 #include <stdexcept>
 #include <vector>
 
-namespace gnni {
+namespace gnni_cpu {
 
 namespace {
 
@@ -158,4 +158,4 @@ void write_csv_report(const BenchmarkReport& report, std::ostream& output) {
            << derived.peak_host_bytes << '\n';
 }
 
-}  // namespace gnni
+}  // namespace gnni_cpu

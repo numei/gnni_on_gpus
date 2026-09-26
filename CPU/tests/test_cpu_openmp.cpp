@@ -6,7 +6,7 @@
 
 int main() {
     // Incoming-edge CSR for: 0 -> 1, 2 -> 1, 1 -> 2.
-    gnni::CSRGraph graph;
+    gnni_cpu::CSRGraph graph;
     graph.num_nodes = 3;
     graph.num_edges = 3;
     graph.directed = true;
@@ -14,41 +14,41 @@ int main() {
     graph.col_idx = {0, 2, 1};
 
     // One row per node: [1,2], [3,4], [5,6].
-    gnni::DenseMatrix features;
+    gnni_cpu::DenseMatrix features;
     features.rows = 3;
     features.cols = 2;
     features.values = {1.0F, 2.0F,
                        3.0F, 4.0F,
                        5.0F, 6.0F};
 
-    gnni::Model model;
+    gnni_cpu::Model model;
 
     // Layer 0: mean aggregation, a 2x2 transform, then ReLU.
-    gnni::Layer first_layer;
+    gnni_cpu::Layer first_layer;
     first_layer.weights.rows = 2;
     first_layer.weights.cols = 2;
     first_layer.weights.values = {1.0F, -2.0F,
                                   2.0F,  1.0F};
-    first_layer.activation = gnni::ActivationKind::ReLU;
+    first_layer.activation = gnni_cpu::ActivationKind::ReLU;
     model.layers.push_back(first_layer);
 
     // Layer 1: aggregate again, transform 2 features to 1 logit, no ReLU.
-    gnni::Layer final_layer;
+    gnni_cpu::Layer final_layer;
     final_layer.weights.rows = 2;
     final_layer.weights.cols = 1;
     final_layer.weights.values = {2.0F, 3.0F};
-    final_layer.activation = gnni::ActivationKind::Identity;
+    final_layer.activation = gnni_cpu::ActivationKind::Identity;
     model.layers.push_back(final_layer);
 
-    const gnni::InferenceConfig sequential_config;
-    const gnni::RunResult reference =
-        gnni::run_cpu_sequential(graph, features, model, sequential_config);
+    const gnni_cpu::InferenceConfig sequential_config;
+    const gnni_cpu::RunResult reference =
+        gnni_cpu::run_cpu_sequential(graph, features, model, sequential_config);
 
-    const std::array<gnni::OpenMPScheduleKind, 4> schedules{
-        gnni::OpenMPScheduleKind::Default,
-        gnni::OpenMPScheduleKind::Static,
-        gnni::OpenMPScheduleKind::Dynamic,
-        gnni::OpenMPScheduleKind::Guided,
+    const std::array<gnni_cpu::OpenMPScheduleKind, 4> schedules{
+        gnni_cpu::OpenMPScheduleKind::Default,
+        gnni_cpu::OpenMPScheduleKind::Static,
+        gnni_cpu::OpenMPScheduleKind::Dynamic,
+        gnni_cpu::OpenMPScheduleKind::Guided,
     };
 
     const std::array<const char*, 4> schedule_names{
@@ -61,19 +61,19 @@ int main() {
     for (std::size_t schedule_index = 0;
          schedule_index < schedules.size();
          ++schedule_index) {
-        gnni::InferenceConfig openmp_config;
+        gnni_cpu::InferenceConfig openmp_config;
         openmp_config.num_threads = 4;
         openmp_config.openmp_schedule = schedules[schedule_index];
         openmp_config.openmp_chunk_size =
-            schedules[schedule_index] == gnni::OpenMPScheduleKind::Default
+            schedules[schedule_index] == gnni_cpu::OpenMPScheduleKind::Default
                 ? 0
                 : 1;
 
-        const gnni::RunResult candidate =
-            gnni::run_cpu_openmp(graph, features, model, openmp_config);
+        const gnni_cpu::RunResult candidate =
+            gnni_cpu::run_cpu_openmp(graph, features, model, openmp_config);
 
-        const gnni::ComparisonReport comparison =
-            gnni::compare_outputs(reference.output, candidate.output);
+        const gnni_cpu::ComparisonReport comparison =
+            gnni_cpu::compare_outputs(reference.output, candidate.output);
 
         std::cout << "schedule: " << schedule_names[schedule_index] << '\n'
                   << "compute_ms: " << candidate.metrics.timing.compute_ms << '\n'

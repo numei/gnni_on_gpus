@@ -1,6 +1,7 @@
 #include "gnni/api.hpp"
 
 #include "cpu_kernels.hpp"
+#include "validate.hpp"
 
 #include <stdexcept>
 #include <utility>
@@ -8,7 +9,7 @@
 #include <chrono>
 #include <cstdint>
 
-namespace gnni {
+namespace gnni_cpu {
 
 namespace {
     std::uint64_t dense_payload_bytes(const DenseMatrix& matrix) noexcept {
@@ -48,7 +49,8 @@ RunResult run_cpu_sequential(
         using Clock = std::chrono::steady_clock;
         const auto inference_start = Clock::now();
 
-        if (config.aggregation != AggregationKind::Mean) {
+        cpu_detail::validate_inputs(graph, features, model);
+        if (config.aggregation != AggregationKind::Mean && config.aggregation != AggregationKind::Sum && config.aggregation != AggregationKind::SymmetricGcn) {
             throw std::runtime_error("CPU sequential backend currently supports only mean aggregation");
         }
 
@@ -65,7 +67,7 @@ RunResult run_cpu_sequential(
 
         for (const Layer& layer : model.layers){
 
-            DenseMatrix aggregated = cpu_detail::aggregate_mean_sequential(graph, current);
+            DenseMatrix aggregated = cpu_detail::aggregate_mean_sequential(graph, current, config.aggregation);
             DenseMatrix transformed = cpu_detail::linear_transform_sequential(aggregated, layer.weights);
 
             cpu_detail::apply_activation_in_place(transformed, layer.activation);
@@ -125,5 +127,5 @@ RunResult run_cpu_sequential(
         return result;
 }
 
-}  // namespace gnni
+}  // namespace gnni_cpu
 

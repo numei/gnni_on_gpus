@@ -6,7 +6,7 @@
 #include <iosfwd>
 #include <vector>
 
-namespace gnni {
+namespace gnni_cpu {
 
 struct BenchmarkOptions {
     std::uint32_t warmup_runs = 1; // 不记录
@@ -54,5 +54,5 @@ void write_text_report(const BenchmarkReport& report, std::ostream& output);
 /** Write one machine-readable CSV header and data row to the supplied stream. */
 void write_csv_report(const BenchmarkReport& report, std::ostream& output);
 
-}  // namespace gnni
+}  // namespace gnni_cpu
 

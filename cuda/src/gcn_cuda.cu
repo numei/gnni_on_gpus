@@ -205,6 +205,8 @@ __global__ void dense_transform_kernel(const float* aggregate,
   }
 }
 
+#include "alternative_kernels.cuh"
+
 unsigned int baseline_block_count(std::size_t elements) {
   const std::size_t required =
       (elements + kThreadsPerBlock - 1U) / kThreadsPerBlock;
@@ -242,9 +244,15 @@ void launch_dense(const float* aggregate, const float* weights, float* output,
 
 class CudaGcnContext::Impl {
  public:
-  explicit Impl(const CSRGraph& graph) : vertices_(graph.num_vertices) {
+  explicit Impl(const CSRGraph& graph, CudaKernelOptions options) : vertices_(graph.num_vertices), options_(options) {
     validate_graph(graph);
 
+    std::vector<int> destinations;
+    if(options_.edge_centric){
+      destinations.resize(graph.column_indices.size());
+      for(int v=0;v<vertices_;++v)
+        std::fill(destinations.begin()+graph.row_offsets[v],destinations.begin()+graph.row_offsets[v+1],v);
+    }
     CudaEvent start;
     CudaEvent stop;
     start.record(stream_.get());
@@ -252,6 +260,7 @@ class CudaGcnContext::Impl {
                                 graph.row_offsets.size(), stream_.get());
     column_indices_.copy_from_host(graph.column_indices.data(),
                                   graph.column_indices.size(), stream_.get());
+    if(options_.edge_centric) destinations_.copy_from_host(destinations.data(),destinations.size(),stream_.get());
     stop.record(stream_.get());
     stop.synchronize();
     graph_h2d_ms_ = elapsed_ms(start, stop);
@@ -336,15 +345,28 @@ class CudaGcnContext::Impl {
     current_features = features.cols;
     for (std::size_t layer = 0; layer < layer_weights.size(); ++layer) {
       const auto& layer_weight = layer_weights[layer];
-      launch_aggregate(row_offsets_.data(), column_indices_.data(), current,
-                       aggregate_.data(), static_cast<std::size_t>(vertices_),
-                       current_features, layer_configs[layer].aggregation,
-                       stream_.get());
-      launch_dense(aggregate_.data(),
-                   weights_.data() + weight_offsets[layer], next,
-                   static_cast<std::size_t>(vertices_), current_features,
-                   layer_weight.cols, layer_configs[layer].activation,
-                   stream_.get());
+      if(options_.edge_centric){
+        GNNI_CUDA_CHECK(cudaMemsetAsync(aggregate_.data(),0,static_cast<std::size_t>(vertices_)*current_features*sizeof(float),stream_.get()));
+        const auto work=checked_element_count(column_indices_.size(),current_features,"edge work");
+        if(work){
+          aggregate_edge_feature_kernel<<<baseline_block_count(work),kThreadsPerBlock,0,stream_.get()>>>(
+            row_offsets_.data(),column_indices_.data(),destinations_.data(),current,aggregate_.data(),column_indices_.size(),current_features,static_cast<int>(layer_configs[layer].aggregation));
+          GNNI_CUDA_CHECK_LAST_KERNEL();
+        }
+      }else{
+        launch_aggregate(row_offsets_.data(), column_indices_.data(), current,
+                         aggregate_.data(), static_cast<std::size_t>(vertices_),
+                         current_features, layer_configs[layer].aggregation, stream_.get());
+      }
+      if(options_.tiled_dense){
+        dim3 grid(static_cast<unsigned>(std::min<std::size_t>((layer_weight.cols+15)/16,65535)),
+                  static_cast<unsigned>(std::min<std::size_t>((static_cast<std::size_t>(vertices_)+15)/16,65535)));
+        dense_tiled_kernel<<<grid,dim3(16,16),0,stream_.get()>>>(aggregate_.data(),weights_.data()+weight_offsets[layer],next,vertices_,current_features,layer_weight.cols,static_cast<int>(layer_configs[layer].activation));
+        GNNI_CUDA_CHECK_LAST_KERNEL();
+      }else{
+        launch_dense(aggregate_.data(),weights_.data()+weight_offsets[layer],next,
+                     static_cast<std::size_t>(vertices_),current_features,layer_weight.cols,layer_configs[layer].activation,stream_.get());
+      }
       current = next;
       next = next == feature_a_.data() ? feature_b_.data() : feature_a_.data();
       current_features = layer_weight.cols;
@@ -372,9 +394,15 @@ class CudaGcnContext::Impl {
   }
 
   float graph_upload_ms() const noexcept { return graph_h2d_ms_; }
+  std::size_t device_bytes() const noexcept {
+    return (row_offsets_.capacity()+column_indices_.capacity()+destinations_.capacity())*sizeof(int)
+      +(feature_a_.capacity()+feature_b_.capacity()+aggregate_.capacity()+weights_.capacity())*sizeof(float);
+  }
 
  private:
   int vertices_;
+  CudaKernelOptions options_;
+  DeviceBuffer<int> destinations_;
   CudaStream stream_;
   DeviceBuffer<int> row_offsets_;
   DeviceBuffer<int> column_indices_;
@@ -385,8 +413,8 @@ class CudaGcnContext::Impl {
   float graph_h2d_ms_ = 0.0F;
 };
 
-CudaGcnContext::CudaGcnContext(const CSRGraph& graph)
-    : impl_(std::make_unique<Impl>(graph)) {}
+CudaGcnContext::CudaGcnContext(const CSRGraph& graph, CudaKernelOptions options)
+    : impl_(std::make_unique<Impl>(graph,options)) {}
 
 CudaGcnContext::~CudaGcnContext() = default;
 CudaGcnContext::CudaGcnContext(CudaGcnContext&&) noexcept = default;
@@ -413,6 +441,8 @@ GcnRunResult CudaGcnContext::run_network(
   }
   return impl_->run_network(features, layer_weights, layer_configs);
 }
+
+std::size_t CudaGcnContext::device_bytes() const noexcept { return impl_ ? impl_->device_bytes() : 0; }
 
 float CudaGcnContext::graph_upload_ms() const noexcept {
   return impl_ ? impl_->graph_upload_ms() : 0.0F;

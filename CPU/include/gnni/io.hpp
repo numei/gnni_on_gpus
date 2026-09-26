@@ -4,7 +4,7 @@
 
 #include <filesystem>
 
-namespace gnni {
+namespace gnni_cpu {
 
 enum class InputFileFormat {
     /// Detect the file type from its magic bytes or leading text token.
@@ -44,4 +44,4 @@ Model load_model(
     const std::filesystem::path& path,
     InputFileFormat format = InputFileFormat::Auto);
 
-}  // namespace gnni
+}  // namespace gnni_cpu

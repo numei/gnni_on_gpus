@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <optional>
 
-namespace gnni {
+namespace gnni_cpu {
 
 struct InferenceConfig {
     AggregationKind aggregation = AggregationKind::Mean;
@@ -106,4 +106,4 @@ const char* backend_name(BackendKind backend) noexcept;
 /** Return build-time availability and optional-feature support. */
 BackendCapabilities backend_capabilities(BackendKind backend) noexcept;
 
-}  // namespace gnni
+}  // namespace gnni_cpu

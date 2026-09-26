@@ -12,7 +12,7 @@
 #include <string>
 #include <vector>
 
-namespace gnni::io_detail {
+namespace gnni_cpu::io_detail {
 
 /** Throw a consistently formatted runtime error for one input file. */
 [[noreturn]] inline void throw_file_error(
@@ -228,4 +228,4 @@ private:
     std::uint64_t position_ = 0;
 };
 
-}  // namespace gnni::io_detail
+}  // namespace gnni_cpu::io_detail

@@ -215,7 +215,7 @@ void test_openmp_cli_end_to_end() {
     };
 
     CoutCapture capture;
-    const int exit_code = gnni::cli::run_cli(
+    const int exit_code = gnni_cpu::cli::run_cli(
         static_cast<int>(sizeof(argv) / sizeof(argv[0])),
         argv);
 

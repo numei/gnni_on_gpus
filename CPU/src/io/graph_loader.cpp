@@ -6,7 +6,7 @@
 #include <string>
 #include <stdexcept>
 
-namespace gnni {
+namespace gnni_cpu {
 namespace {
     constexpr std::array<std::uint8_t, 8> graph_magic{
         'G', 'N', 'N', 'I', 'G', 'R', 'F', 0
@@ -261,4 +261,4 @@ CSRGraph load_graph(const std::filesystem::path& path, InputFileFormat format) {
     io_detail::throw_file_error(path, "graph", "invalid InputFileFormat");
 }
 
-}  // namespace gnni
+}  // namespace gnni_cpu

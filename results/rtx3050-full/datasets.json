@@ -1,0 +1,14 @@
+{
+  "tmp\\q1-data\\er-n10000-f16-seed42.gnni": "ef98469dcd0807efc2df86b0fce533742fe2d279ede5a5f447d20085c573b6c7",
+  "tmp\\q1-data\\er-n100000-f16-seed42.gnni": "d4682697d1471b1dbbd904d441fc81978b4a84ddd892f313924b71d051dc75a7",
+  "tmp\\q1-data\\er-n1000000-f16-seed42.gnni": "69f678dc070aecb398640b9fda262f87535f44899b68097a7ae3702ad91fcea5",
+  "tmp\\q1-data\\ba-n10000-f16-seed42.gnni": "0bc2ca4344892a2ee3189d6ef2743b07898a516a12a323eda66985c80d5d227a",
+  "tmp\\q1-data\\ba-n100000-f16-seed42.gnni": "a1a4597b7e004c14470830b095ee6f1f4faa76f0eff19e035f008fff8473ff01",
+  "tmp\\q1-data\\ba-n1000000-f16-seed42.gnni": "cf92f113add3f6897723df2225ce3e50a6cb118c43c963c0a0eb9f69673e1493",
+  "tmp\\q1-data\\ws-n10000-f16-seed42.gnni": "da5fb5145112fd36da0a4ab8d9d49e718d4e6adee4fd096a8a4bd0acb52cab7c",
+  "tmp\\q1-data\\ws-n100000-f16-seed42.gnni": "615cd2cd8eb9209c08ce40aa9438d029790973a0ba060352a89b07a479b21f9f",
+  "tmp\\q1-data\\ws-n1000000-f16-seed42.gnni": "c5e3afc1e0576a895dde6a712d7926c5c6722a7e7d09ea695aa2c8f9ef6dbc2b",
+  "tmp\\q1-data\\ba-n10000-f64-seed42.gnni": "ebb734ec5d8b443c11701532685c5f29b90fbefb8d06ba3c27c340d58a3d86b3",
+  "tmp\\q1-data\\ba-n10000-f128-seed42.gnni": "e6382a2cc991563f3711fffc25b8f944a6bc0092c37990e33e27dd7fedd2b98e",
+  "tmp\\q1-data\\cora.gnni": "0bc9260d3896dfd9ad5df861c114d44bce6e1942febe94906bb494248df4dd2d"
+}

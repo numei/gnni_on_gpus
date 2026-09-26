@@ -9,7 +9,7 @@ bool parse_throws_invalid_argument(
     int argc,
     const char* const argv[]) {
     try {
-        static_cast<void>(gnni::cli::parse_cli(argc, argv));
+        static_cast<void>(gnni_cpu::cli::parse_cli(argc, argv));
     } catch (const std::invalid_argument&) {
         return true;
     }
@@ -40,17 +40,17 @@ int main() {
 
     const auto valid_count = static_cast<int>(
         sizeof(valid_arguments) / sizeof(valid_arguments[0]));
-    const gnni::cli::CliOptions options =
-        gnni::cli::parse_cli(valid_count, valid_arguments);
+    const gnni_cpu::cli::CliOptions options =
+        gnni_cpu::cli::parse_cli(valid_count, valid_arguments);
 
     if (options.graph_path != "graph.bin" ||
         options.features_path != "features.bin" ||
         options.model_path != "model.bin" ||
-        options.backend != gnni::BackendKind::CpuOpenMP ||
-        options.input_format != gnni::InputFileFormat::Binary ||
+        options.backend != gnni_cpu::BackendKind::CpuOpenMP ||
+        options.input_format != gnni_cpu::InputFileFormat::Binary ||
         options.inference.num_threads != 4 ||
         options.inference.openmp_schedule !=
-            gnni::OpenMPScheduleKind::Guided ||
+            gnni_cpu::OpenMPScheduleKind::Guided ||
         options.inference.openmp_chunk_size != 8 ||
         options.benchmark.warmup_runs != 0 ||
         options.benchmark.measured_runs != 3 ||
@@ -88,8 +88,8 @@ int main() {
     }
 
     const char* help_arguments[] = {"gnni", "--help"};
-    const gnni::cli::CliOptions help =
-        gnni::cli::parse_cli(2, help_arguments);
+    const gnni_cpu::cli::CliOptions help =
+        gnni_cpu::cli::parse_cli(2, help_arguments);
     if (!help.show_help) {
         std::cerr << "--help was not parsed correctly\n";
         return 1;

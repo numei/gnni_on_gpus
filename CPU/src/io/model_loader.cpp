@@ -9,7 +9,7 @@
 #include "utility"
 #include "vector"
 
-namespace gnni {
+namespace gnni_cpu {
 
 namespace {
     constexpr std::array<std::uint8_t, 8> model_magic{
@@ -290,4 +290,4 @@ Model load_model(const std::filesystem::path& path, InputFileFormat format) {
     throw std::logic_error("invalid InputFileFormat value");
 }
 
-}  // namespace gnni
+}  // namespace gnni_cpu

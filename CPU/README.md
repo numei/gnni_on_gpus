@@ -1,5 +1,11 @@
 # GNNI — Role A CPU Inference
 
+Integration update: build from the repository root and use `gnni_q1` for
+shared `.gnni` datasets, sum/mean/symmetric aggregation and CPU/GPU comparisons.
+CPU public C++ symbols now use namespace `gnni_cpu`. The `gnni` executable
+documented below is the legacy mean-aggregation CLI; run its build commands
+from `CPU/`. See `../README.txt` for the integrated workflow.
+
 This repository contains the Role A implementation of a full-batch GNN inference baseline:
 
 - versioned binary graph, feature, and model loading;

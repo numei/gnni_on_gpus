@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <stdexcept>
 
-namespace gnni {
+namespace gnni_cpu {
 
 ComparisonReport compare_outputs(
     const DenseMatrix& reference,
@@ -139,5 +139,5 @@ ComparisonReport compare_outputs(
         return report;
     }
 
-}  // namespace gnni
+}  // namespace gnni_cpu
 

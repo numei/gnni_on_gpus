@@ -12,3 +12,8 @@ out/
 *.a
 *.lib
 *.pdb
+tmp/
+__pycache__/
+*.pyc
+*.gnni
+*.gnni.json

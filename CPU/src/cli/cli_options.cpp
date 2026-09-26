@@ -13,7 +13,7 @@
 #include <iostream>
 #include <optional>
 
-namespace gnni::cli {
+namespace gnni_cpu::cli {
 
 namespace {
 
@@ -356,4 +356,4 @@ int run_cli(int argc, const char* const argv[]) {
     return exit_code;
 }
 
-}  // namespace gnni::cli
+}  // namespace gnni_cpu::cli

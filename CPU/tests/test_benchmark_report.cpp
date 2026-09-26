@@ -6,21 +6,21 @@
 #include <vector>
 
 int main() {
-    gnni::BenchmarkReport report;
-    report.backend = gnni::BackendKind::CpuSequential;
+    gnni_cpu::BenchmarkReport report;
+    report.backend = gnni_cpu::BackendKind::CpuSequential;
     report.options.warmup_runs = 1;
     report.options.measured_runs = 2;
-    report.compute_ms = gnni::summarize_samples({1.0, 3.0});
-    report.inference_ms = gnni::summarize_samples({2.0, 4.0});
+    report.compute_ms = gnni_cpu::summarize_samples({1.0, 3.0});
+    report.inference_ms = gnni_cpu::summarize_samples({2.0, 4.0});
 
-    gnni::RunMetrics first;
+    gnni_cpu::RunMetrics first;
     first.timing.compute_ms = 1.0;
     first.timing.inference_ms = 2.0;
     first.memory.host_bytes = 100;
     first.nodes_per_second = 10.0;
     first.edges_per_second = 20.0;
 
-    gnni::RunMetrics second;
+    gnni_cpu::RunMetrics second;
     second.timing.compute_ms = 3.0;
     second.timing.inference_ms = 4.0;
     second.memory.host_bytes = 120;
@@ -30,7 +30,7 @@ int main() {
     report.samples = {first, second};
 
     std::ostringstream text_output;
-    gnni::write_text_report(report, text_output);
+    gnni_cpu::write_text_report(report, text_output);
     const std::string text = text_output.str();
 
     if (text.find("backend: cpu") == std::string::npos ||
@@ -41,7 +41,7 @@ int main() {
     }
 
     std::ostringstream csv_output;
-    gnni::write_csv_report(report, csv_output);
+    gnni_cpu::write_csv_report(report, csv_output);
     const std::string csv = csv_output.str();
 
     if (csv.find("backend,aggregation,output,threads") != 0 ||

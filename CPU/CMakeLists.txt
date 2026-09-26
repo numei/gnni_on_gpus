@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.20)
 
 project(gnni_on_gpus LANGUAGES CXX)
 
+if(MSVC)
+    add_compile_options(/utf-8 /EHsc)
+endif()
+
 option(GNNI_BUILD_TESTS "Build Role A unit tests" ON)
 
 add_library(gnni_core STATIC

@@ -4,7 +4,7 @@
 #include <optional>
 #include <vector>
 
-namespace gnni {
+namespace gnni_cpu {
 
 using VertexId = std::uint32_t;
 using EdgeOffset = std::uint64_t;
@@ -64,6 +64,8 @@ struct Model {
 enum class AggregationKind {
     Mean,
     Attention,
+    Sum,
+    SymmetricGcn,
 };
 
 enum class OutputTransform {
@@ -85,4 +87,4 @@ enum class OpenMPScheduleKind {
     Guided,
 };
 
-}  // namespace gnni
+}  // namespace gnni_cpu

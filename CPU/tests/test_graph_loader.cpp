@@ -124,7 +124,7 @@ void test_valid_graph_and_auto_detection() {
     const std::vector<std::uint32_t> col_idx{0, 2, 1};
     write_graph_file(file.path(), 1, 1, 3, 3, 0, row_ptr, col_idx);
 
-    const gnni::CSRGraph graph = gnni::load_graph(file.path());
+    const gnni_cpu::CSRGraph graph = gnni_cpu::load_graph(file.path());
     require(graph.num_nodes == 3, "valid graph num_nodes mismatch");
     require(graph.num_edges == 3, "valid graph num_edges mismatch");
     require(graph.directed, "valid graph directed flag mismatch");
@@ -132,8 +132,8 @@ void test_valid_graph_and_auto_detection() {
     require(graph.col_idx == col_idx, "valid graph col_idx mismatch");
     require(!graph.edge_features.has_value(), "unexpected edge features");
 
-    const gnni::CSRGraph explicit_binary =
-        gnni::load_graph(file.path(), gnni::InputFileFormat::Binary);
+    const gnni_cpu::CSRGraph explicit_binary =
+        gnni_cpu::load_graph(file.path(), gnni_cpu::InputFileFormat::Binary);
     require(explicit_binary.row_ptr == row_ptr, "explicit binary graph mismatch");
 }
 
@@ -141,28 +141,28 @@ void test_header_and_size_errors() {
     TemporaryFile bad_magic("bad_graph_magic");
     write_graph_file(bad_magic.path(), 1, 1, 1, 0, 0, {0, 0}, {}, false);
     expect_runtime_error(
-        [&] { static_cast<void>(gnni::load_graph(bad_magic.path())); },
+        [&] { static_cast<void>(gnni_cpu::load_graph(bad_magic.path())); },
         "bad graph magic"
     );
 
     TemporaryFile bad_version("bad_graph_version");
     write_graph_file(bad_version.path(), 2, 1, 1, 0, 0, {0, 0}, {});
     expect_runtime_error(
-        [&] { static_cast<void>(gnni::load_graph(bad_version.path())); },
+        [&] { static_cast<void>(gnni_cpu::load_graph(bad_version.path())); },
         "unsupported graph version"
     );
 
     TemporaryFile truncated("truncated_graph");
     write_graph_file(truncated.path(), 1, 1, 2, 1, 0, {0, 1, 1}, {});
     expect_runtime_error(
-        [&] { static_cast<void>(gnni::load_graph(truncated.path())); },
+        [&] { static_cast<void>(gnni_cpu::load_graph(truncated.path())); },
         "truncated graph payload"
     );
 
     TemporaryFile trailing("trailing_graph");
     write_graph_file(trailing.path(), 1, 1, 1, 0, 0, {0, 0}, {}, true, true);
     expect_runtime_error(
-        [&] { static_cast<void>(gnni::load_graph(trailing.path())); },
+        [&] { static_cast<void>(gnni_cpu::load_graph(trailing.path())); },
         "trailing graph payload"
     );
 }
@@ -171,21 +171,21 @@ void test_csr_structure_errors() {
     TemporaryFile wrong_first_offset("graph_wrong_first_offset");
     write_graph_file(wrong_first_offset.path(), 1, 1, 2, 1, 0, {1, 1, 1}, {0});
     expect_runtime_error(
-        [&] { static_cast<void>(gnni::load_graph(wrong_first_offset.path())); },
+        [&] { static_cast<void>(gnni_cpu::load_graph(wrong_first_offset.path())); },
         "non-zero first row_ptr"
     );
 
     TemporaryFile decreasing_offsets("graph_decreasing_offsets");
     write_graph_file(decreasing_offsets.path(), 1, 1, 3, 3, 0, {0, 2, 1, 3}, {1, 2, 0});
     expect_runtime_error(
-        [&] { static_cast<void>(gnni::load_graph(decreasing_offsets.path())); },
+        [&] { static_cast<void>(gnni_cpu::load_graph(decreasing_offsets.path())); },
         "decreasing row_ptr"
     );
 
     TemporaryFile invalid_vertex("graph_invalid_vertex");
     write_graph_file(invalid_vertex.path(), 1, 1, 3, 1, 0, {0, 0, 1, 1}, {3});
     expect_runtime_error(
-        [&] { static_cast<void>(gnni::load_graph(invalid_vertex.path())); },
+        [&] { static_cast<void>(gnni_cpu::load_graph(invalid_vertex.path())); },
         "out-of-range neighbour"
     );
 }
@@ -194,21 +194,21 @@ void test_row_neighbour_errors() {
     TemporaryFile self_loop("graph_self_loop");
     write_graph_file(self_loop.path(), 1, 1, 3, 1, 0, {0, 0, 1, 1}, {1});
     expect_runtime_error(
-        [&] { static_cast<void>(gnni::load_graph(self_loop.path())); },
+        [&] { static_cast<void>(gnni_cpu::load_graph(self_loop.path())); },
         "self-loop"
     );
 
     TemporaryFile duplicate("graph_duplicate_neighbour");
     write_graph_file(duplicate.path(), 1, 1, 3, 2, 0, {0, 0, 2, 2}, {0, 0});
     expect_runtime_error(
-        [&] { static_cast<void>(gnni::load_graph(duplicate.path())); },
+        [&] { static_cast<void>(gnni_cpu::load_graph(duplicate.path())); },
         "duplicate neighbour"
     );
 
     TemporaryFile unsorted("graph_unsorted_neighbours");
     write_graph_file(unsorted.path(), 1, 1, 3, 2, 0, {0, 0, 2, 2}, {2, 0});
     expect_runtime_error(
-        [&] { static_cast<void>(gnni::load_graph(unsorted.path())); },
+        [&] { static_cast<void>(gnni_cpu::load_graph(unsorted.path())); },
         "unsorted neighbours"
     );
 }
@@ -218,7 +218,7 @@ void test_edge_features_are_explicitly_rejected() {
     TemporaryFile file("graph_edge_features");
     write_graph_file(file.path(), 1, 3, 2, 0, 1, {0, 0, 0}, {});
     expect_runtime_error(
-        [&] { static_cast<void>(gnni::load_graph(file.path())); },
+        [&] { static_cast<void>(gnni_cpu::load_graph(file.path())); },
         "unimplemented edge features"
     );
 }

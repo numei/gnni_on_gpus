@@ -14,7 +14,12 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#ifdef _WIN32
+#include <process.h>
+#define getpid _getpid
+#else
 #include <unistd.h>
+#endif
 
 namespace {
 

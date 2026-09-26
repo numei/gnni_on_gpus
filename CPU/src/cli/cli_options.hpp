@@ -8,7 +8,7 @@
 #include <iosfwd>
 #include <optional>
 
-namespace gnni::cli {
+namespace gnni_cpu::cli {
 
 struct CliOptions {
     std::filesystem::path graph_path;
@@ -41,4 +41,4 @@ void print_help(std::ostream& output);
  */
 int run_cli(int argc, const char* const argv[]);
 
-}  // namespace gnni::cli
+}  // namespace gnni_cpu::cli

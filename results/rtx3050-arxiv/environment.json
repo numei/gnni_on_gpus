@@ -1,0 +1,30 @@
+{
+  "utc": "2026-09-26T08:05:19Z",
+  "platform": "Windows-10-10.0.19045-SP0",
+  "processor": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+  "gpu": "Sat Sep 26 16:05:20 2026       \n+-----------------------------------------------------------------------------------------+\n| NVIDIA-SMI 616.92                 KMD Version: 616.92        CUDA UMD Version: 13.4     |\n+-----------------------------------------+------------------------+----------------------+\n| GPU  Name                  Driver-Model | Bus-Id          Disp.A | Volatile Uncorr. ECC |\n| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |\n|                                         |                        |               MIG M. |\n|=========================================+========================+======================|\n|   0  NVIDIA GeForce RTX 3050 ...  WDDM  |   00000000:01:00.0 Off |                  N/A |\n| N/A   68C    P3             13W /   35W |       0MiB /   4096MiB |      0%      Default |\n|                                         |                        |                  N/A |\n+-----------------------------------------+------------------------+----------------------+\n\n+-----------------------------------------------------------------------------------------+\n| Processes:                                                                              |\n|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |\n|        ID   ID                                                               Usage      |\n|=========================================================================================|\n|  No running processes found                                                             |\n+-----------------------------------------------------------------------------------------+",
+  "commit": "c608605c950c9f264e4b1d9a01843965fc158416",
+  "git_status": "M .gitignore\n M CPU/CMakeLists.txt\n M CPU/include/gnni/api.hpp\n M CPU/include/gnni/benchmark.hpp\n M CPU/include/gnni/io.hpp\n M CPU/include/gnni/types.hpp\n M CPU/src/backends/cpu_kernels.cpp\n M CPU/src/backends/cpu_kernels.hpp\n M CPU/src/backends/cpu_openmp.cpp\n M CPU/src/backends/cpu_sequential.cpp\n M CPU/src/backends/dispatch.cpp\n M CPU/src/benchmark/report.cpp\n M CPU/src/benchmark/runner.cpp\n M CPU/src/cli/cli_options.cpp\n M CPU/src/cli/cli_options.hpp\n M CPU/src/cli/main.cpp\n M CPU/src/core/compare.cpp\n M CPU/src/io/binary_reader.hpp\n M CPU/src/io/graph_loader.cpp\n M CPU/src/io/matrix_loader.cpp\n M CPU/src/io/model_loader.cpp\n M CPU/tests/test_benchmark_report.cpp\n M CPU/tests/test_binary_matrix_loader.cpp\n M CPU/tests/test_cli_end_to_end.cpp\n M CPU/tests/test_cli_options.cpp\n M CPU/tests/test_cpu_openmp.cpp\n M CPU/tests/test_cpu_sequential.cpp\n M CPU/tests/test_graph_loader.cpp\n M common/CMakeLists.txt\n M common/apps/dataset_generator.cpp\n M common/src/dataset_io.cpp\n M common/tests/dataset_io_test.cpp\n M cuda/CMakeLists.txt\n M cuda/include/gnni/gcn_cuda.hpp\n M cuda/src/gcn_cuda.cu\n?? CMakeLists.txt\n?? CPU/src/backends/validate.hpp\n?? DOCUMENTATION.md\n?? README.md\n?? README.txt\n?? cuda/src/alternative_kernels.cuh\n?? experiments/\n?? integration/\n?? results/",
+  "source_sha256": "817f0a62fe69166b71281764aa1e3a96e6bda98a1299943338c61c845f4c4fec",
+  "executable_sha256": "e6c83ef0394bd8ab60d2ba64aea006b245d343b5d62de2fb7e22ead32e317f9a",
+  "arguments": {
+    "exe": "X:\\Polito-computer-engineering\\system-device\\gnni_on_gpus\\build-cuda-ninja\\gnni_q1.exe",
+    "generator": "X:\\Polito-computer-engineering\\system-device\\gnni_on_gpus\\build-cuda-ninja\\common\\gnni_dataset_generator.exe",
+    "output": "results\\rtx3050-arxiv",
+    "data_dir": "tmp\\q1-data",
+    "suite": "public",
+    "backends": "all",
+    "threads": "4",
+    "repeat": "7",
+    "warmup": "2",
+    "public": "[WindowsPath('tmp/q1-data/ogbn-arxiv.gnni')]"
+  },
+  "backends": [
+    "cpu",
+    "omp",
+    "cuda-vertex",
+    "cuda-tiled",
+    "cuda-edge",
+    "cuda-edge-tiled"
+  ]
+}

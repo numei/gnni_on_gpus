@@ -6,11 +6,19 @@
 #include <cstring>
 #include <fcntl.h>
 #include <fstream>
+#ifdef _WIN32
+#define NOMINMAX
+#include <windows.h>
+#include <io.h>
+#include <process.h>
+#include <sys/stat.h>
+#else
 #include <linux/fs.h>
+#include <unistd.h>
+#endif
 #include <limits>
 #include <stdexcept>
 #include <string>
-#include <unistd.h>
 #include <vector>
 
 namespace gnni {
@@ -194,12 +202,26 @@ std::uint64_t size_to_u64(std::size_t value,
 
 std::filesystem::path temporary_path(const std::filesystem::path& path) {
   std::filesystem::path temporary = path;
-  temporary += ".tmp-" + std::to_string(static_cast<long long>(::getpid()));
+  temporary += ".tmp-" + std::to_string(static_cast<long long>(
+#ifdef _WIN32
+::_getpid()
+#else
+::getpid()
+#endif
+));
   return temporary;
 }
 
 void install_temporary(const std::filesystem::path& temporary,
                        const std::filesystem::path& path, bool overwrite) {
+#ifdef _WIN32
+  if (!MoveFileExW(temporary.c_str(), path.c_str(), overwrite ? MOVEFILE_REPLACE_EXISTING : 0)) {
+    const auto error = GetLastError();
+    if (error == ERROR_ALREADY_EXISTS || error == ERROR_FILE_EXISTS)
+      throw file_error(path, "output already exists and overwrite is false");
+    throw file_error(path, "cannot atomically install temporary file: " + std::to_string(error));
+  }
+#else
   if (!overwrite) {
     if (::renameat2(AT_FDCWD, temporary.c_str(), AT_FDCWD, path.c_str(),
                     RENAME_NOREPLACE) == 0) {
@@ -219,6 +241,7 @@ void install_temporary(const std::filesystem::path& temporary,
     throw file_error(path, "cannot rename temporary file into place: " +
                                rename_error.message());
   }
+#endif
 }
 
 }  // namespace
@@ -411,8 +434,11 @@ void save_dataset(const std::filesystem::path& path, const Dataset& dataset,
       payload_size(vertices, entries, feature_dim, flags, path);
 
   const std::filesystem::path temporary = temporary_path(path);
-  const int descriptor = ::open(temporary.c_str(), O_WRONLY | O_CREAT | O_EXCL,
-                                0666);
+#ifdef _WIN32
+  const int descriptor = ::_wopen(temporary.c_str(), _O_WRONLY | _O_CREAT | _O_EXCL | _O_BINARY, _S_IREAD | _S_IWRITE);
+#else
+  const int descriptor = ::open(temporary.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0666);
+#endif
   if (descriptor < 0) {
     throw file_error(path, "cannot create unique temporary file '" +
                                temporary.string() + "': " +
@@ -420,10 +446,19 @@ void save_dataset(const std::filesystem::path& path, const Dataset& dataset,
   }
 
   bool owns_temporary = true;
-  std::FILE* output = ::fdopen(descriptor, "wb");
+  std::FILE* output =
+#ifdef _WIN32
+    ::_fdopen(descriptor, "wb");
+#else
+    ::fdopen(descriptor, "wb");
+#endif
   if (output == nullptr) {
     const int saved_errno = errno;
+#ifdef _WIN32
+    ::_close(descriptor);
+#else
     ::close(descriptor);
+#endif
     std::error_code ignored;
     std::filesystem::remove(temporary, ignored);
     throw file_error(path, "cannot open temporary stream: " +

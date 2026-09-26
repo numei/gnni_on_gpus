@@ -6,7 +6,7 @@
 #include <vector>
 #include <stdexcept>
 
-namespace gnni {
+namespace gnni_cpu {
 
     /*
         samples是一堆测试结果， 假设inference 跑了5次，10.2ms, 9,8ms, 10.0ms, 9.9ms, 10.1ms
@@ -126,4 +126,4 @@ BenchmarkReport benchmark_backend(
         return report;
 }
 
-}  // namespace gnni
+}  // namespace gnni_cpu

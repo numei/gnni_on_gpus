@@ -16,9 +16,11 @@
 #include <limits>
 #include <stdexcept>
 #include <string>
+#ifdef __linux__
 #include <sys/syscall.h>
-#include <thread>
 #include <unistd.h>
+#endif
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -44,6 +46,7 @@ void wait_for_competing_create(const char* new_path) noexcept {
 
 }  // namespace
 
+#ifdef __linux__
 extern "C" int rename(const char* old_path, const char* new_path) noexcept {
   wait_for_competing_create(new_path);
   return static_cast<int>(::syscall(SYS_renameat, AT_FDCWD, old_path, AT_FDCWD,
@@ -67,6 +70,7 @@ extern "C" int renameat2(int old_directory, const char* old_path,
 #endif
 }
 
+#endif
 namespace {
 
 using Bytes = std::vector<std::uint8_t>;
@@ -444,6 +448,7 @@ std::vector<Test> make_tests() {
                        throw std::runtime_error("existing output was modified");
                      }
                    }});
+#ifdef __linux__
   tests.push_back({"does not overwrite a dangling symlink by default", [] {
                      TestDirectory directory;
                      const auto path = directory.file("dangling.gnni");
@@ -531,6 +536,7 @@ std::vector<Test> make_tests() {
                            "concurrently created target was overwritten");
                      }
                    }});
+#endif
   tests.push_back({"overwrites existing output when requested", [] {
                      TestDirectory directory;
                      const auto path = directory.file("existing.gnni");
