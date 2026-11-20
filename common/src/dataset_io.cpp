@@ -13,7 +13,9 @@
 #include <process.h>
 #include <sys/stat.h>
 #else
+#ifdef __linux__
 #include <linux/fs.h>
+#endif
 #include <unistd.h>
 #endif
 #include <limits>
@@ -221,11 +223,36 @@ void install_temporary(const std::filesystem::path& temporary,
       throw file_error(path, "output already exists and overwrite is false");
     throw file_error(path, "cannot atomically install temporary file: " + std::to_string(error));
   }
-#else
+#elif defined(__linux__)
   if (!overwrite) {
     if (::renameat2(AT_FDCWD, temporary.c_str(), AT_FDCWD, path.c_str(),
                     RENAME_NOREPLACE) == 0) {
       return;
+    }
+    const int saved_errno = errno;
+    if (saved_errno == EEXIST) {
+      throw file_error(path, "output already exists and overwrite is false");
+    }
+    throw file_error(path, "cannot atomically install temporary file: " +
+                               std::string(std::strerror(saved_errno)));
+  }
+
+  std::error_code rename_error;
+  std::filesystem::rename(temporary, path, rename_error);
+  if (rename_error) {
+    throw file_error(path, "cannot rename temporary file into place: " +
+                               rename_error.message());
+  }
+#else
+  if (!overwrite) {
+    if (::link(temporary.c_str(), path.c_str()) == 0) {
+      if (::unlink(temporary.c_str()) == 0) {
+        return;
+      }
+      const int saved_errno = errno;
+      ::unlink(path.c_str());
+      throw file_error(path, "cannot remove installed temporary link: " +
+                                 std::string(std::strerror(saved_errno)));
     }
     const int saved_errno = errno;
     if (saved_errno == EEXIST) {

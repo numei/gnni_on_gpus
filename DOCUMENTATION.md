@@ -120,7 +120,7 @@ Windows dataset writes use exclusive temporary files and atomic installation
 via MoveFileExW; Linux keeps renameat2 with RENAME_NOREPLACE. General dataset
 round-trip and corruption tests run on both. Linux-specific syscall-hook and
 symlink tests remain Linux-only. They have not been re-executed on this Windows
-machine. See docs/VALIDATION.md for the actual run record.
+machine.
 
 ## Experimental method
 
@@ -205,18 +205,15 @@ the 16-to-8 layer because the narrower output underutilizes its tiles.
 
 ![Memory payload estimates](results/rtx3050-full/plots/memory.png)
 
-Detailed interpretation, limits and kernel evidence are in
-[docs/RESULTS_ANALYSIS.md](docs/RESULTS_ANALYSIS.md). Raw samples, standard
-deviations, complete tables and original Nsight reports remain under
-`results/`. [docs/VALIDATION.md](docs/VALIDATION.md) records the environment
-and checks. The earlier RTX 5070 baseline is historical and is not combined
-with RTX 3050 measurements or used for cross-machine speedup claims.
+Complete tables and additional interpretation are retained in the Markdown
+reports under `results/`. The earlier RTX 5070 baseline is not combined with
+RTX 3050 measurements or used for cross-machine speedup claims.
 
 ## Reproduction and deliverables
 
-README.txt gives exact build, run, conversion, profiling and plotting commands.
-The repository includes C++/CUDA source, design documentation, raw samples,
-metadata, tables, PNG/PDF figures and presentation material in docs/.
+README.md gives exact build, run, conversion, profiling and plotting commands.
+The repository includes C++/CUDA source, design documentation, result tables,
+PNG figures and presentation material in docs/.
 Generated datasets and build toolchains are excluded from version control;
 dataset hashes and converter provenance identify the exact inputs.
 
