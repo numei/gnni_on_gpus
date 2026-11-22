@@ -23,7 +23,7 @@ int main(){try{
             for(const auto& schedule:{"static","dynamic","guided"}){
                 o.schedule=schedule;
                 auto actual=q1::Engine(d,m,o).run();
-                require(gnni_cpu::compare_outputs(reference.output,actual.output).within_tolerance,"cross-backend mismatch");
+                require(gnni_cpu::compare_outputs(reference.output,actual.output,q1::verification_tolerances(backend)).within_tolerance,"cross-backend mismatch");
             }
         }
     }
@@ -42,7 +42,7 @@ int main(){try{
         auto ref=q1::Engine(d,m,o).run();
         for(const auto& backend:q1::available_backends()){
             o.backend=backend;o.threads=2;q1::Engine e(d,m,o);
-            for(int i=0;i<3;++i)require(gnni_cpu::compare_outputs(ref.output,e.run().output).within_tolerance,"multilayer/reuse mismatch");
+            for(int i=0;i<3;++i)require(gnni_cpu::compare_outputs(ref.output,e.run().output,q1::verification_tolerances(backend)).within_tolerance,"multilayer/reuse mismatch");
         }
     }
     auto malformed=m;malformed.layers[0].weights.rows=20;

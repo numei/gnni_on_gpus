@@ -1,9 +1,10 @@
 // Included in gcn_cuda.cu's anonymous namespace.
 // One edge-feature contribution per thread. Atomics balance skewed rows at
 // the cost of contention and floating-point summation order variability.
+template <typename Feature>
 __global__ void aggregate_edge_feature_kernel(
     const int* rows, const int* columns, const int* destinations,
-    const float* input, float* output, std::size_t entries,
+    const Feature* input, float* output, std::size_t entries,
     std::size_t features, int mode) {
   const std::size_t first=static_cast<std::size_t>(blockIdx.x)*blockDim.x+threadIdx.x;
   const std::size_t stride=static_cast<std::size_t>(gridDim.x)*blockDim.x;
@@ -16,14 +17,17 @@ __global__ void aggregate_edge_feature_kernel(
       const int du=rows[u+1]-rows[u];
       scale=du?rsqrtf(float(rows[v+1]-rows[v])*float(du)):0.0F;
     }
-    atomicAdd(output+static_cast<std::size_t>(v)*features+f,scale*input[static_cast<std::size_t>(u)*features+f]);
+    const auto source = static_cast<std::size_t>(u) * features + f;
+    atomicAdd(output + static_cast<std::size_t>(v) * features + f,
+              scale * static_cast<float>(input[source]));
   }
 }
 
 // A 16x16 tile reuses feature/weight values in shared memory. Every thread
 // reaches each barrier, including partial tiles; large N uses a grid stride.
+template <typename Feature>
 __global__ void dense_tiled_kernel(const float* input,const float* weights,
-    float* output,std::size_t vertices,std::size_t fin,std::size_t fout,int activation){
+    Feature* output,std::size_t vertices,std::size_t fin,std::size_t fout,int activation){
   __shared__ float a[16][16];
   __shared__ float b[16][16];
   const unsigned tx=threadIdx.x,ty=threadIdx.y;
@@ -40,7 +44,10 @@ __global__ void dense_tiled_kernel(const float* input,const float* weights,
         for(unsigned j=0;j<16;++j)sum+=a[ty][j]*b[j][tx];
         __syncthreads();
       }
-      if(row<vertices && col<fout)output[row*fout+col]=activation==static_cast<int>(Activation::Relu)?fmaxf(0.0F,sum):sum;
+      if (row < vertices && col < fout) {
+        if (activation == static_cast<int>(Activation::Relu)) sum = fmaxf(0.0F, sum);
+        output[row*fout+col] = static_cast<Feature>(sum);
+      }
     }
   }
 }

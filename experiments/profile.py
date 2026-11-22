@@ -11,9 +11,13 @@ p.add_argument("--ncu",default="ncu")
 p.add_argument("--output",required=True,type=pathlib.Path)
 p.add_argument("--layers",default="16,8")
 a=p.parse_args()
+available = subprocess.check_output([str(a.exe.resolve()), "--list-backends"], text=True).split()
+backends = [name for name in available if name.startswith("cuda-")]
+if not backends:
+    p.error("the selected executable has no CUDA backends")
 a.output.mkdir(parents=True,exist_ok=False)
 status={}
-for backend in ("cuda-vertex","cuda-tiled","cuda-edge","cuda-edge-tiled"):
+for backend in backends:
     cmd=[a.ncu,"--set","basic","--target-processes","all","--launch-count","8","--export",str(a.output/backend),
          str(a.exe.resolve()),"--dataset",str(a.dataset.resolve()),"--backend",backend,"--aggregation","mean",
          "--layers",a.layers,"--warmup","0","--repeat","1"]

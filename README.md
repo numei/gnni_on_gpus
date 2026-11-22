@@ -69,7 +69,19 @@ build/gnni_q1 --dataset graph.gnni --layers 64,32 --backend omp --threads 4 --sc
 build/gnni_q1 --dataset graph.gnni --layers 64,32 --backend cuda-tiled --verify
 ```
 
-Backends: cpu, omp, cuda-vertex, cuda-tiled, cuda-edge, cuda-edge-tiled.
+CPU backends are `cpu` and `omp`. The eight GPU scenarios are:
+
+| Aggregation | Dense transform | FP32 features | Compressed FP16 features |
+| --- | --- | --- | --- |
+| Vertex | Global memory | `cuda-vertex` | `cuda-vertex-fp16` |
+| Vertex | Shared-memory tiles | `cuda-tiled` | `cuda-tiled-fp16` |
+| Edge | Global memory | `cuda-edge` | `cuda-edge-fp16` |
+| Edge | Shared-memory tiles | `cuda-edge-tiled` | `cuda-edge-tiled-fp16` |
+
+FP16 halves the bytes per stored feature. All eight use FP32 weights and
+accumulation. Each compressed run packs the input, stores layer outputs in
+FP16, and returns FP32 values to the caller.
+
 Use --list-backends to list compiled backends. GPU hardware availability is
 checked when a GPU context is created, not by --list-backends.
 
@@ -106,6 +118,18 @@ The integrated path uses .gnni; the legacy CPU CLI still reads its original
 three-file format, whose loader disallows self-loops. Do not mix formats.
 
 ## Experiments and Plots
+
+To compare all eight GPU scenarios on the same three small synthetic graphs,
+run the smoke suite (use your build directory in the executable paths):
+
+```bash
+python experiments/run_experiments.py --exe build/gnni_q1 --generator build/common/gnni_dataset_generator --suite smoke --backends cuda --output results/compression-run
+python experiments/analyze.py results/compression-run
+```
+
+The [focused compression report](results/rtx3050-compression-focused/REPORT.md)
+compares all eight CUDA scenarios on a 100,000-node BA graph at two feature
+widths and on Cora. It includes the measured timings, plot and repeat command.
 
 ```bash
 python -m pip install -r experiments/requirements.txt

@@ -39,6 +39,8 @@ struct GcnRunResult {
 struct CudaKernelOptions {
   bool edge_centric = false;
   bool tiled_dense = false;
+  // Store input features and layer outputs in FP16. Math stays in FP32.
+  bool compress_features = false;
 };
 
 class CudaGcnContext {

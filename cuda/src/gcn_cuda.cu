@@ -3,6 +3,7 @@
 #include "gnni/cuda_error.hpp"
 #include "gnni/device_buffer.hpp"
 
+#include <cuda_fp16.h>
 #include <cuda_runtime.h>
 
 #include <algorithm>
@@ -12,6 +13,7 @@
 #include <limits>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -141,8 +143,9 @@ float elapsed_ms(const CudaEvent& start, const CudaEvent& stop) {
   return milliseconds;
 }
 
+template <typename Feature>
 __global__ void aggregate_vertex_feature_kernel(
-    const int* row_offsets, const int* column_indices, const float* input,
+    const int* row_offsets, const int* column_indices, const Feature* input,
     float* aggregate, std::size_t vertices, std::size_t features,
     int aggregation_mode) {
   const std::size_t first = static_cast<std::size_t>(blockIdx.x) * blockDim.x +
@@ -171,15 +174,16 @@ __global__ void aggregate_vertex_feature_kernel(
                     : rsqrtf(static_cast<float>(degree) *
                              static_cast<float>(neighbor_degree));
       }
-      sum += scale * input[static_cast<std::size_t>(neighbor) * features +
-                           feature];
+      const auto source = static_cast<std::size_t>(neighbor) * features + feature;
+      sum += scale * static_cast<float>(input[source]);
     }
     aggregate[index] = sum;
   }
 }
 
+template <typename Feature>
 __global__ void dense_transform_kernel(const float* aggregate,
-                                       const float* weights, float* output,
+                                       const float* weights, Feature* output,
                                        std::size_t vertices,
                                        std::size_t input_features,
                                        std::size_t output_features,
@@ -201,7 +205,7 @@ __global__ void dense_transform_kernel(const float* aggregate,
     if (activation_mode == static_cast<int>(Activation::Relu)) {
       value = fmaxf(value, 0.0F);
     }
-    output[index] = value;
+    output[index] = static_cast<Feature>(value);
   }
 }
 
@@ -214,8 +218,9 @@ unsigned int baseline_block_count(std::size_t elements) {
       std::min<std::size_t>(required, kMaxBaselineBlocks));
 }
 
+template <typename Feature>
 void launch_aggregate(const int* row_offsets, const int* column_indices,
-                      const float* input, float* aggregate,
+                      const Feature* input, float* aggregate,
                       std::size_t vertices, std::size_t features,
                       Aggregation aggregation, cudaStream_t stream) {
   const auto elements = checked_element_count(vertices, features, "aggregate");
@@ -226,7 +231,8 @@ void launch_aggregate(const int* row_offsets, const int* column_indices,
   GNNI_CUDA_CHECK_LAST_KERNEL();
 }
 
-void launch_dense(const float* aggregate, const float* weights, float* output,
+template <typename Feature>
+void launch_dense(const float* aggregate, const float* weights, Feature* output,
                   std::size_t vertices, std::size_t input_features,
                   std::size_t output_features, Activation activation,
                   cudaStream_t stream) {
@@ -270,6 +276,20 @@ class CudaGcnContext::Impl {
       const DenseMatrix& features,
       const std::vector<DenseMatrix>& layer_weights,
       const std::vector<GcnLayerConfig>& layer_configs) {
+    if (options_.compress_features) {
+      return run_with_storage(features, layer_weights, layer_configs,
+                              half_feature_a_, half_feature_b_);
+    }
+    return run_with_storage(features, layer_weights, layer_configs,
+                            feature_a_, feature_b_);
+  }
+
+  template <typename Feature>
+  GcnRunResult run_with_storage(
+      const DenseMatrix& features,
+      const std::vector<DenseMatrix>& layer_weights,
+      const std::vector<GcnLayerConfig>& layer_configs,
+      DeviceBuffer<Feature>& feature_a, DeviceBuffer<Feature>& feature_b) {
     const auto wall_start = std::chrono::steady_clock::now();
     validate_matrix(features, "features");
     if (features.rows != static_cast<std::size_t>(vertices_)) {
@@ -316,8 +336,8 @@ class CudaGcnContext::Impl {
 
     const std::size_t workspace_elements = checked_element_count(
         static_cast<std::size_t>(vertices_), max_feature_width, "workspace");
-    feature_a_.resize(workspace_elements);
-    feature_b_.resize(workspace_elements);
+    feature_a.resize(workspace_elements);
+    feature_b.resize(workspace_elements);
     aggregate_.resize(workspace_elements);
     weights_.resize(total_weight_values);
 
@@ -328,10 +348,21 @@ class CudaGcnContext::Impl {
     CudaEvent d2h_start;
     CudaEvent d2h_stop;
 
+    const void* host_input = features.values.data();
+    // Transfers are ordered on the same stream, so both can reuse this buffer.
+    std::vector<__half> staging;
+    if constexpr (std::is_same_v<Feature, __half>) {
+      const auto output_size = checked_element_count(vertices_, current_features, "output");
+      staging.resize(std::max(features.values.size(), output_size));
+      std::transform(features.values.begin(), features.values.end(),
+                     staging.begin(), [](float x) { return __float2half_rn(x); });
+      host_input = staging.data();
+    }
+
     h2d_start.record(stream_.get());
     GNNI_CUDA_CHECK(cudaMemcpyAsync(
-        feature_a_.data(), features.values.data(),
-        features.values.size() * sizeof(float), cudaMemcpyHostToDevice,
+        feature_a.data(), host_input,
+        features.values.size() * sizeof(Feature), cudaMemcpyHostToDevice,
         stream_.get()));
     GNNI_CUDA_CHECK(cudaMemcpyAsync(
         weights_.data(), packed_weights.data(),
@@ -340,8 +371,8 @@ class CudaGcnContext::Impl {
     h2d_stop.record(stream_.get());
 
     kernel_start.record(stream_.get());
-    const float* current = feature_a_.data();
-    float* next = feature_b_.data();
+    const Feature* current = feature_a.data();
+    Feature* next = feature_b.data();
     current_features = features.cols;
     for (std::size_t layer = 0; layer < layer_weights.size(); ++layer) {
       const auto& layer_weight = layer_weights[layer];
@@ -368,18 +399,24 @@ class CudaGcnContext::Impl {
                      static_cast<std::size_t>(vertices_),current_features,layer_weight.cols,layer_configs[layer].activation,stream_.get());
       }
       current = next;
-      next = next == feature_a_.data() ? feature_b_.data() : feature_a_.data();
+      next = next == feature_a.data() ? feature_b.data() : feature_a.data();
       current_features = layer_weight.cols;
     }
     kernel_stop.record(stream_.get());
 
     DenseMatrix output(static_cast<std::size_t>(vertices_), current_features);
+    void* host_output = output.values.data();
+    if constexpr (std::is_same_v<Feature, __half>) host_output = staging.data();
     d2h_start.record(stream_.get());
     GNNI_CUDA_CHECK(cudaMemcpyAsync(
-        output.values.data(), current, output.values.size() * sizeof(float),
+        host_output, current, output.values.size() * sizeof(Feature),
         cudaMemcpyDeviceToHost, stream_.get()));
     d2h_stop.record(stream_.get());
     d2h_stop.synchronize();
+    if constexpr (std::is_same_v<Feature, __half>) {
+      std::transform(staging.begin(), staging.begin() + output.values.size(),
+                     output.values.begin(), [](__half x) { return __half2float(x); });
+    }
 
     CudaTimings timings;
     timings.graph_h2d_ms = graph_h2d_ms_;
@@ -396,6 +433,7 @@ class CudaGcnContext::Impl {
   float graph_upload_ms() const noexcept { return graph_h2d_ms_; }
   std::size_t device_bytes() const noexcept {
     return (row_offsets_.capacity()+column_indices_.capacity()+destinations_.capacity())*sizeof(int)
+      +(half_feature_a_.capacity()+half_feature_b_.capacity())*sizeof(__half)
       +(feature_a_.capacity()+feature_b_.capacity()+aggregate_.capacity()+weights_.capacity())*sizeof(float);
   }
 
@@ -408,6 +446,8 @@ class CudaGcnContext::Impl {
   DeviceBuffer<int> column_indices_;
   DeviceBuffer<float> feature_a_;
   DeviceBuffer<float> feature_b_;
+  DeviceBuffer<__half> half_feature_a_;
+  DeviceBuffer<__half> half_feature_b_;
   DeviceBuffer<float> aggregate_;
   DeviceBuffer<float> weights_;
   float graph_h2d_ms_ = 0.0F;

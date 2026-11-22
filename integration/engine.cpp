@@ -10,6 +10,40 @@
 #endif
 
 namespace q1 {
+namespace {
+#ifdef Q1_HAS_CUDA
+struct CudaBackend {
+    const char* name;
+    gnni::CudaKernelOptions kernels;
+};
+constexpr CudaBackend cuda_backends[] = {
+    // edge-centric, tiled dense transform, compressed feature storage
+    {"cuda-vertex",          {false, false, false}},
+    {"cuda-tiled",           {false, true,  false}},
+    {"cuda-edge",            {true,  false, false}},
+    {"cuda-edge-tiled",      {true,  true,  false}},
+    {"cuda-vertex-fp16",     {false, false, true}},
+    {"cuda-tiled-fp16",      {false, true,  true}},
+    {"cuda-edge-fp16",       {true,  false, true}},
+    {"cuda-edge-tiled-fp16", {true,  true,  true}},
+};
+
+const CudaBackend* cuda_backend(const std::string& name) {
+    for (const auto& backend : cuda_backends)
+        if (name == backend.name) return &backend;
+    return nullptr;
+}
+#endif
+}
+
+gnni_cpu::ComparisonOptions verification_tolerances(const std::string& backend) {
+#ifdef Q1_HAS_CUDA
+    const auto* entry = cuda_backend(backend);
+    if (entry && entry->kernels.compress_features) return {2e-3, 5e-3};
+#endif
+    return {};
+}
+
 using Clock=std::chrono::steady_clock;
 gnni_cpu::Model fixed_model(std::size_t input_width,const std::vector<std::size_t>& widths,unsigned seed){
     if(!input_width || widths.empty()) throw std::invalid_argument("model needs input width and layers");
@@ -35,7 +69,7 @@ std::vector<std::string> available_backends(){
     std::vector<std::string> result{"cpu"};
     if(gnni_cpu::backend_capabilities(gnni_cpu::BackendKind::CpuOpenMP).available) result.push_back("omp");
 #ifdef Q1_HAS_CUDA
-    result.insert(result.end(),{"cuda-vertex","cuda-tiled","cuda-edge","cuda-edge-tiled"});
+    for (const auto& backend : cuda_backends) result.push_back(backend.name);
 #endif
     return result;
 }
@@ -90,9 +124,7 @@ struct Engine::Impl {
         }
 #ifdef Q1_HAS_CUDA
         else {
-            gnni::CudaKernelOptions kernels;
-            kernels.edge_centric=options.backend=="cuda-edge" || options.backend=="cuda-edge-tiled";
-            kernels.tiled_dense=options.backend=="cuda-tiled" || options.backend=="cuda-edge-tiled";
+            const auto& kernels=cuda_backend(options.backend)->kernels;
             gpu=std::make_unique<gnni::CudaGcnContext>(data.graph,kernels);
             graph_upload=gpu->graph_upload_ms();
             gpu_input=data.features;
@@ -102,6 +134,11 @@ struct Engine::Impl {
                 extra_host+=layer.weights.values.size()*sizeof(float);
                 configs.push_back({options.aggregation=="mean"?gnni::Aggregation::Mean:options.aggregation=="sum"?gnni::Aggregation::Sum:gnni::Aggregation::SymmetricGcn,
                     layer.activation==gnni_cpu::ActivationKind::ReLU?gnni::Activation::Relu:gnni::Activation::None});
+            }
+            if (kernels.compress_features) {
+                // The same FP16 host array stages the input and the final output.
+                extra_host += std::uint64_t(data.features.rows) *
+                              std::max(data.features.cols, width) * sizeof(std::uint16_t);
             }
         }
 #endif

@@ -35,7 +35,9 @@ try{
     for(int i=1;i<argc;++i){
         std::string key=argv[i];
         if(key=="--help"){
-            std::cout<<"gnni_q1 --dataset FILE [--model FILE | --layers 64,32] [--backend cpu|omp|cuda-vertex|cuda-tiled|cuda-edge|cuda-edge-tiled]\n"
+            std::cout<<"gnni_q1 --dataset FILE [--model FILE | --layers 64,32] [--backend NAME]\n"
+              "  Backends: cpu, omp, cuda-vertex, cuda-tiled, cuda-edge, cuda-edge-tiled.\n"
+              "  Append -fp16 to a CUDA backend name to compress feature storage.\n"
               "  [--aggregation mean|sum|symmetric] [--threads N] [--schedule static|dynamic|guided]\n"
               "  [--warmup N] [--repeat N] [--seed N] [--verify] [--csv FILE]\n"
               "--list-backends lists compiled backends. CSV contains one row per measured inference.\n";
@@ -64,7 +66,8 @@ try{
         auto cpu_options=options;cpu_options.backend="cpu";
         q1::Engine reference(data,model,cpu_options);
         const auto expected=reference.run();const auto actual=engine.run();
-        const auto comparison=gnni_cpu::compare_outputs(expected.output,actual.output);
+        const auto comparison=gnni_cpu::compare_outputs(expected.output,actual.output,
+                                                        q1::verification_tolerances(options.backend));
         if(!comparison.shapes_match || !comparison.within_tolerance) throw std::runtime_error("correctness verification failed; max absolute error="+std::to_string(comparison.max_absolute_error));
         max_error=comparison.max_absolute_error;
     }
