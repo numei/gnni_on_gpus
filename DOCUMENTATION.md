@@ -5,12 +5,12 @@
 This project implements full-batch inference on one static graph. The model
 is a stack of GCN-style message-passing layers with fixed FP32 weights:
 
-`A_l[v,f] = sum_(u in incoming(v)) s(v,u) H_l[u,f]`
+$A_l[v,f] = \sum_{u \in incoming(v)} s(v,u) H_l[u,f]$
 
-`H_(l+1) = activation(A_l W_l)`.
+$H_(l+1) = activation(A_l W_l).$
 
-The selectable scaling is 1 for sum, `1/degree(v)` for mean, and
-`1/sqrt(degree(v)*degree(u))` for symmetric normalization. For symmetric mode,
+The selectable scaling is 1 for sum, $\frac{1}{degree(v)}$ for mean, and
+$\frac{1}{sqrt(degree(v)*degree(u))}$ for symmetric normalization. For symmetric mode,
 a zero-degree neighbor contributes zero. Degrees are CSR row degrees. This
 definition on directed graphs is explicit; the public experiments make the
 graphs undirected so that the usual symmetric interpretation applies.
@@ -63,12 +63,12 @@ OpenMP runtime. Input and model shapes are checked before indexing.
 
 ## CUDA mappings and memory
 
-| Unified backend | Aggregation | Dense transform |
-|---|---|---|
-| cuda-vertex | One `(vertex,feature)` output per thread | One `(vertex,output feature)` output per thread |
-| cuda-tiled | Same vertex-feature aggregation | 16x16 shared-memory tiling |
-| cuda-edge | One `(edge,feature)` contribution per thread, atomic accumulation | Baseline dense transform |
-| cuda-edge-tiled | Edge-feature aggregation | 16x16 shared-memory tiling |
+| Unified backend | Aggregation                                                       | Dense transform                                 |
+| --------------- | ----------------------------------------------------------------- | ----------------------------------------------- |
+| cuda-vertex     | One `(vertex,feature)` output per thread                          | One `(vertex,output feature)` output per thread |
+| cuda-tiled      | Same vertex-feature aggregation                                   | 16x16 shared-memory tiling                      |
+| cuda-edge       | One `(edge,feature)` contribution per thread, atomic accumulation | Baseline dense transform                        |
+| cuda-edge-tiled | Edge-feature aggregation                                          | 16x16 shared-memory tiling                      |
 
 This 2x2 comparison separates the effect of aggregation mapping from shared
 memory in the dense stage. The baseline already coalesces accesses across
@@ -131,15 +131,15 @@ with a fixed seed to reduce a fixed execution-order bias. Runs are sequential,
 not simultaneous CPU/GPU stress tests. Short sample counts and laptop thermal
 variation limit claims; the exported plots show sample standard deviation.
 
-| Dimension | Configurations |
-|---|---|
-| Graph families | Erdos-Renyi, Barabasi-Albert, Watts-Strogatz |
-| Graph size | 10,000; 100,000; 1,000,000 vertices |
-| Input features | 16, 64, 128 on BA-10k |
-| Depth | 1, 2, 4, 8 on BA-10k |
-| CPU scaling | 1, 2, 4, 8 threads and static/dynamic/guided on BA-100k |
-| Public graphs | Cora and ogbn-arxiv, symmetrized with explicit self-loops |
-| Implementations | Sequential, OpenMP, four CUDA configurations |
+| Dimension       | Configurations                                            |
+| --------------- | --------------------------------------------------------- |
+| Graph families  | Erdos-Renyi, Barabasi-Albert, Watts-Strogatz              |
+| Graph size      | 10,000; 100,000; 1,000,000 vertices                       |
+| Input features  | 16, 64, 128 on BA-10k                                     |
+| Depth           | 1, 2, 4, 8 on BA-10k                                      |
+| CPU scaling     | 1, 2, 4, 8 threads and static/dynamic/guided on BA-100k   |
+| Public graphs   | Cora and ogbn-arxiv, symmetrized with explicit self-loops |
+| Implementations | Sequential, OpenMP, four CUDA configurations              |
 
 The graph-size sweep fixes input width 16 and layer widths 16,8. The
 feature-size sweep changes only input width; the depth sweep repeats hidden
@@ -181,13 +181,13 @@ Every configuration passed CPU-reference verification. The actual combined
 CPU/GPU test suite passed 20/20 tests, and Compute Sanitizer reported no
 memory errors, leaks or shared-memory hazards.
 
-| Dataset | Serial ms | OpenMP 4-thread ms | Best GPU ms | CPU/GPU speedup |
-|---|---:|---:|---:|---:|
-| ER, 1m, F16 | 2877.65 | 1063.01 | 59.63 | 48.26x |
-| BA, 1m, F16 | 2767.41 | 1560.19 | 57.58 | 48.06x |
-| WS, 1m, F16 | 1022.42 | 766.78 | 43.46 | 23.53x |
-| Cora, F1433 | 122.45 | 68.37 | 5.12 | 23.91x |
-| ogbn-arxiv, F128 | 1095.35 | 443.48 | 37.39 | 29.29x |
+| Dataset          | Serial ms | OpenMP 4-thread ms | Best GPU ms | CPU/GPU speedup |
+| ---------------- | --------: | -----------------: | ----------: | --------------: |
+| ER, 1m, F16      |   2877.65 |            1063.01 |       59.63 |          48.26x |
+| BA, 1m, F16      |   2767.41 |            1560.19 |       57.58 |          48.06x |
+| WS, 1m, F16      |   1022.42 |             766.78 |       43.46 |          23.53x |
+| Cora, F1433      |    122.45 |              68.37 |        5.12 |          23.91x |
+| ogbn-arxiv, F128 |   1095.35 |             443.48 |       37.39 |          29.29x |
 
 Values are median full-call milliseconds, with mean aggregation and layer
 widths 16,8. Tiled vertex is best for ER/BA/arxiv here; baseline vertex is
