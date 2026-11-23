@@ -162,7 +162,7 @@ int main(int argc, char** argv) {
               << "avg_end_to_end_ms=" << end_to_end_ms << '\n'
               << "nodes_per_second=" << nodes_per_second << '\n'
               << "edges_per_second=" << edges_per_second << '\n'
-              << "output_checksum=" << checksum << '\n';
+              << "output_checksum=" << checksum << '\n' << std::flush;
     return 0;
   } catch (const std::exception& error) {
     std::cerr << "benchmark failed: " << error.what() << '\n';

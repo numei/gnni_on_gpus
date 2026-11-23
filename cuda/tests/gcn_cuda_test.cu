@@ -286,6 +286,38 @@ void test_multilayer_and_context_reuse() {
   }
 }
 
+void test_feature_compression() {
+  const CSRGraph graph(1, {0, 1}, {0});
+  // At 1.0, this increment is a quarter of one FP16 ULP.
+  constexpr float shifted = 1.0F + 1.0F / 4096.0F;
+  const DenseMatrix input(1, 2, {shifted, 1.0F});
+  const std::vector<DenseMatrix> weights = {
+      DenseMatrix(2, 3, {4096, 0, 0, -4095, shifted, 1}),
+      DenseMatrix(3, 3, {1, 0, 0, 0, 4096, 0, 0, -4096, shifted})};
+  const std::vector<GcnLayerConfig> configs(2);
+  // The three outputs expose rounding at input upload, between layers, and
+  // at the final store. Rounding the -4095 weight would also change output 0.
+  const DenseMatrix expected_float(1, 3, {2, 1, shifted});
+  const DenseMatrix expected_half(1, 3, {1, 0, 1});
+
+  for (bool edge_centric : {false, true}) {
+    for (bool tiled_dense : {false, true}) {
+      CudaGcnContext full(graph, {edge_centric, tiled_dense, false});
+      CudaGcnContext compressed(graph, {edge_centric, tiled_dense, true});
+      expect_close(full.run_network(input, weights, configs).output,
+                   expected_float, "FP32 features");
+      expect_close(compressed.run_network(input, weights, configs).output,
+                   expected_half, "FP16 features");
+
+      // Two feature buffers hold three elements each at the widest layer.
+      constexpr std::size_t saved_bytes = 2 * 3 * (sizeof(float) - 2);
+      if (full.device_bytes() != compressed.device_bytes() + saved_bytes) {
+        throw std::runtime_error("incorrect FP16 feature storage size");
+      }
+    }
+  }
+}
+
 template <typename Function>
 void expect_invalid_argument(Function&& function, const std::string& label) {
   try {
@@ -334,6 +366,7 @@ int main() {
       {"zero edge graph", test_zero_edge_graph},
       {"non-block-multiple dimensions", test_non_block_multiple_dimensions},
       {"multilayer and context reuse", test_multilayer_and_context_reuse},
+      {"feature compression across all CUDA variants", test_feature_compression},
       {"invalid inputs", test_invalid_inputs},
   };
 

@@ -30,6 +30,18 @@ def main():
         summaries.append(s)
     baselines={s["case_id"]:s["median_ms"] for s in summaries if s["backend"]=="cpu"}
     for s in summaries:s["speedup_vs_cpu"]=baselines[s["case_id"]]/s["median_ms"] if s["case_id"] in baselines else ""
+    by_backend = {(s["case_id"], s["backend"]): s for s in summaries}
+    pairs = []
+    for compressed in summaries:
+        if compressed["backend"].endswith("-fp16"):
+            base = by_backend.get((compressed["case_id"], compressed["backend"].removesuffix("-fp16")))
+            if base is not None:
+                pairs.append((base, compressed))
+    if pairs:
+        for s in summaries:
+            s["speedup_vs_matching_fp32"] = ""
+        for base, compressed in pairs:
+            compressed["speedup_vs_matching_fp32"] = base["median_ms"] / compressed["median_ms"]
     with (a.run/"summary.csv").open("w",newline="",encoding="utf8") as f:
         w=csv.DictWriter(f,fieldnames=list(summaries[0]));w.writeheader();w.writerows(summaries)
     plt.rcParams.update({"font.size":10,"axes.spines.top":False,"axes.spines.right":False})
@@ -68,6 +80,8 @@ def main():
         fig,ax=plt.subplots(figsize=(8,4.5));bottom=[0.]*len(gpu)
         for key,label in [("h2d_median_ms","H2D"),("compute_median_ms","Kernels"),("d2h_median_ms","D2H")]:
             vals=[s[key] for s in gpu];ax.bar([s["backend"] for s in gpu],vals,bottom=bottom,label=label);bottom=[x+y for x,y in zip(bottom,vals)]
+        if len(gpu) > 4:
+            ax.tick_params(axis="x", labelrotation=45)
         ax.set(ylabel="Stage duration (ms)",title="GPU stage medians (exclude host overhead)");ax.legend();save(fig,"gpu-stages")
     fig,ax=plt.subplots(figsize=(8,4.5));x=list(range(len(points)))
     ax.bar([v-.18 for v in x],[int(s["host_payload_bytes"])/2**20 for s in points],width=.36,label="Host payload estimate")
@@ -80,6 +94,16 @@ def main():
         schedule=s["schedule"] if s["backend"]=="omp" else "n/a"
         speed_text=f'{speed:.3f}' if speed!="" else "n/a"
         lines.append(f'| {dataset_path(s["dataset"]).name} | {s["layer_widths"]} | {s["backend"]} | {thread} | {schedule} | {s["median_ms"]:.4f} | {s["stdev_ms"]:.4f} | {speed_text} |')
+    if pairs:
+        lines.extend(["", "## Feature compression", "",
+                      "Speedup is median end-to-end time with FP32 features divided by median time with FP16 features. Values above 1 indicate faster inference with compression. Device bytes saved includes all reported device allocations.", "",
+                      "| Dataset | Layers | CUDA backend | FP32 ms | FP16 ms | Speedup | Device bytes saved | FP16 max absolute error vs CPU |",
+                      "|---|---|---|---:|---:|---:|---:|---:|"])
+        for base, compressed in pairs:
+            saved = int(base["device_payload_bytes"]) - int(compressed["device_payload_bytes"])
+            lines.append(f'| {dataset_path(base["dataset"]).name} | {base["layer_widths"]} | {base["backend"]} '
+                         f'| {base["median_ms"]:.4f} | {compressed["median_ms"]:.4f} '
+                         f'| {compressed["speedup_vs_matching_fp32"]:.3f} | {saved} | {compressed["max_abs_error"]} |')
     (a.run/"REPORT.md").write_text('\n'.join(lines)+'\n',encoding="utf8")
     print(f"Wrote {len(summaries)} summaries and plots to {a.run}")
 

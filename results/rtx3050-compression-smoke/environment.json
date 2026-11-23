@@ -1,0 +1,32 @@
+{
+  "utc": "2026-11-22T21:21:00Z",
+  "platform": "Windows-10-10.0.19045-SP0",
+  "processor": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+  "gpu": "Sun Nov 22 22:21:02 2026       \n+-----------------------------------------------------------------------------------------+\n| NVIDIA-SMI 621.01                 KMD Version: 621.01        CUDA UMD Version: 13.5     |\n+-----------------------------------------+------------------------+----------------------+\n| GPU  Name                  Driver-Model | Bus-Id          Disp.A | Volatile Uncorr. ECC |\n| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |\n|                                         |                        |               MIG M. |\n|=========================================+========================+======================|\n|   0  NVIDIA GeForce RTX 3050 ...  WDDM  |   00000000:01:00.0 Off |                  N/A |\n| N/A   58C    P3             12W /   35W |       0MiB /   4096MiB |      0%      Default |\n|                                         |                        |                  N/A |\n+-----------------------------------------+------------------------+----------------------+\n\n+-----------------------------------------------------------------------------------------+\n| Processes:                                                                              |\n|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |\n|        ID   ID                                                               Usage      |\n|=========================================================================================|\n|  No running processes found                                                             |\n+-----------------------------------------------------------------------------------------+",
+  "commit": "1a6e4116ed88b153f7dfe14e3270bbe614b808cc",
+  "git_status": "M DOCUMENTATION.md\n M README.md\n M cuda/include/gnni/gcn_cuda.hpp\n M cuda/src/alternative_kernels.cuh\n M cuda/src/gcn_cuda.cu\n M cuda/tests/gcn_cuda_test.cu\n M experiments/analyze.py\n M experiments/profile.py\n M experiments/run_experiments.py\n M integration/engine.cpp\n M integration/engine.hpp\n M integration/main.cpp\n M integration/test_engine.cpp",
+  "source_sha256": "5ceb9b82ce6fbf584f1c103585b93ea2e0a1bd7edea8f468d45a60af38363bc0",
+  "executable_sha256": "c4bcf5c150ff2ac9aa4d619859c4c6995aa8acb6401b1c661d754757c743e2a0",
+  "arguments": {
+    "exe": "C:\\Users\\25596\\Downloads\\gnni_on_gpus-main\\gnni_on_gpus\\build-gpu\\gnni_q1.exe",
+    "generator": "C:\\Users\\25596\\Downloads\\gnni_on_gpus-main\\gnni_on_gpus\\build-gpu\\common\\gnni_dataset_generator.exe",
+    "output": "results\\rtx3050-compression-smoke",
+    "data_dir": "tmp\\q1-data",
+    "suite": "smoke",
+    "backends": "cuda",
+    "threads": "4",
+    "repeat": "7",
+    "warmup": "2",
+    "public": "[]"
+  },
+  "backends": [
+    "cuda-vertex",
+    "cuda-tiled",
+    "cuda-edge",
+    "cuda-edge-tiled",
+    "cuda-vertex-fp16",
+    "cuda-tiled-fp16",
+    "cuda-edge-fp16",
+    "cuda-edge-tiled-fp16"
+  ]
+}

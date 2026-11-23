@@ -1,0 +1,16 @@
+{
+  "dataset": "cora",
+  "feature_dim": 1433,
+  "format_version": 1,
+  "make_undirected": true,
+  "num_classes": 7,
+  "original_citation_rows": 5429,
+  "original_vertices": 2708,
+  "output_bytes": 15607880,
+  "output_sha256": "0bc9260d3896dfd9ad5df861c114d44bce6e1942febe94906bb494248df4dd2d",
+  "self_loops": true,
+  "source": "https://linqs-data.soe.ucsc.edu/public/lbc/cora.tgz",
+  "source_sha256": "0d4ed463d1627bb7f3e8420effe8f5545fd492ae8f88dab44ce86cee7b26d7e8",
+  "splits": "absent_from_linqs_archive",
+  "stored_csr_entries": 13264
+}

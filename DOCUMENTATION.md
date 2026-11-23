@@ -70,8 +70,13 @@ OpenMP runtime. Input and model shapes are checked before indexing.
 | cuda-edge       | One `(edge,feature)` contribution per thread, atomic accumulation | Baseline dense transform                        |
 | cuda-edge-tiled | Edge-feature aggregation                                          | 16x16 shared-memory tiling                      |
 
-This 2x2 comparison separates the effect of aggregation mapping from shared
-memory in the dense stage. The baseline already coalesces accesses across
+Each mapping also has a `-fp16` variant. This gives eight configurations
+across aggregation mapping, shared memory in the dense stage, and feature
+storage precision. The FP16 variants round the input and each layer output
+to binary16 (round to nearest, ties to even). Kernels convert feature loads
+to FP32 and use FP32 for aggregation, accumulation and weights. The input
+file and returned matrix use FP32. FP16 reduces the representable range and
+can overflow for sufficiently large activations. The baseline coalesces accesses across
 adjacent features, although irregular neighbor indices limit locality.
 Edge parallelism distributes long rows across threads and may improve degree
 imbalance. Its costs are atomic contention, zeroing the aggregate buffer,
@@ -90,7 +95,11 @@ events and the stream. Buffers retain capacity for repeated calls. Kernels
 check launch errors; the synchronized output boundary detects execution errors.
 
 Memory scales approximately as `4*(N+1+E) + 12*N*Fmax + 4*weight_count`
-bytes on device, with an extra `4*E` for edge mapping. Capacity, not just
+bytes on device, with an extra `4*E` for edge mapping. FP16 reduces the
+workspace term from `12*N*Fmax` to `8*N*Fmax` because the two feature
+buffers use two bytes per value and the aggregate buffer uses four.
+Feature transfer payloads are halved in both directions; host packing and
+unpacking count toward end-to-end time. Capacity, not just
 logical sizes, is reported. Host memory reports estimated live array payloads
 including the retained input dataset/model, adapters and temporary matrices.
 It excludes allocator overhead, OS RSS and CUDA driver/context allocations.
@@ -99,14 +108,15 @@ reference output is outside the reported measured-call footprint.
 
 Sparse CSR is used for the adjacency and dense storage for features/weights.
 A dense FP32 adjacency for one million nodes alone would require 4 TB, so
-dense adjacency and feature compression are not implemented. This tradeoff
-is documented instead of presenting an unperformed comparison.
+the experiments use CSR in all eight configurations.
 
 ## Correctness and portability
 
 `--verify` executes the real sequential CPU backend and the requested backend
 on identical inputs before timing. The comparator requires matching shapes,
-finite values and `abs(error) <= 1e-5 + 1e-4*abs(reference)` per element.
+finite values and `abs(error) <= 1e-5 + 1e-4*abs(reference)` per FP32 element.
+The FP16 comparison uses `2e-3 + 5e-3*abs(reference)` to allow for
+feature rounding. CSV rows record the observed maximum absolute error.
 Small literal fixtures additionally test the CPU calculation independently.
 Atomic results can vary in low bits; a failed tolerance check aborts the
 experiment instead of producing a successful result row.
@@ -139,7 +149,13 @@ variation limit claims; the exported plots show sample standard deviation.
 | Depth           | 1, 2, 4, 8 on BA-10k                                      |
 | CPU scaling     | 1, 2, 4, 8 threads and static/dynamic/guided on BA-100k   |
 | Public graphs   | Cora and ogbn-arxiv, symmetrized with explicit self-loops |
-| Implementations | Sequential, OpenMP, four CUDA configurations              |
+| Implementations | Sequential, OpenMP, eight CUDA configurations             |
+
+The [feature compression run](results/rtx3050-compression-smoke/REPORT.md)
+compares all eight GPU scenarios on 1,000-vertex ER, BA and WS graphs.
+Each FP16 variant saved 64,000 bytes of device memory at feature width 16.
+End-to-end median latency increased in all 12 pairs. The archived full
+and public-dataset results below use the original four FP32 GPU configurations.
 
 The graph-size sweep fixes input width 16 and layer widths 16,8. The
 feature-size sweep changes only input width; the depth sweep repeats hidden
@@ -175,7 +191,7 @@ benchmark runs. No performance result is inferred from a kernel's design.
 
 ## Results and analysis
 
-The completed evaluation contains 120 backend configurations and 840 measured
+The original FP32 evaluation contains 120 backend configurations and 840 measured
 samples: 114 configurations for synthetic graphs/Cora and six for ogbn-arxiv.
 Every configuration passed CPU-reference verification. The actual combined
 CPU/GPU test suite passed 20/20 tests, and Compute Sanitizer reported no
@@ -208,6 +224,34 @@ the 16-to-8 layer because the narrower output underutilizes its tiles.
 Complete tables and additional interpretation are retained in the Markdown
 reports under `results/`. The earlier RTX 5070 baseline is not combined with
 RTX 3050 measurements or used for cross-machine speedup claims.
+
+### FP16 feature storage on a larger graph and Cora
+
+On the RTX 3050 Laptop GPU, FP16 reduced total device allocation by
+**19.3–33.2%** across 12 matched comparisons. It also increased median
+end-to-end latency in every pair. The chart compares each FP16 run with its
+own FP32 baseline. Both use the same aggregation mapping and dense kernel.
+
+![FP16 divided by FP32 median latency for four CUDA mappings on BA and Cora. Ratios range from 2.00 to 5.71.](results/rtx3050-compression-focused/compression-latency.png)
+
+| Graph | Input features | Device memory saved per mapping | FP16 / FP32 median time |
+| --- | ---: | ---: | ---: |
+| Barabási–Albert, 100,000 vertices | 16 | 6.10 MiB | 2.00–4.57× |
+| Same Barabási–Albert graph | 128 | 48.83 MiB | 3.41–5.71× |
+| Cora, 2,708 vertices | 1,433 | 14.80 MiB | 2.66–3.19× |
+
+The distinction between kernel and application timing matters here. For
+vertex-centric aggregation with a tiled dense transform on BA at width 128,
+FP16 reduced median kernel time from 9.52 to 6.90 ms, while the full call
+increased from 23.13 to 121.91 ms. The full call includes FP32-to-FP16
+packing on the CPU, transfers, synchronization and output unpacking.
+Conversion time was not measured separately.
+
+Each configuration used two warmups and seven timed calls with mean
+aggregation and layer output widths 16 and 8. All 24 configurations passed
+CPU-reference verification. The largest absolute FP16 output error was
+0.000159. The [focused report](results/rtx3050-compression-focused/REPORT.md)
+contains all 12 timing pairs and links to the raw samples.
 
 ## Reproduction and deliverables
 

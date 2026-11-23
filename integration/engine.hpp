@@ -32,4 +32,5 @@ private:
     std::unique_ptr<Impl> impl_;
 };
 std::vector<std::string> available_backends();
+gnni_cpu::ComparisonOptions verification_tolerances(const std::string& backend);
 }

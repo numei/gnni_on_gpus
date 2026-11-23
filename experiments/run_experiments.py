@@ -25,8 +25,8 @@ def main():
     p.add_argument("--generator", required=True, type=pathlib.Path)
     p.add_argument("--output", required=True, type=pathlib.Path)
     p.add_argument("--data-dir", default="tmp/q1-data", type=pathlib.Path)
-    p.add_argument("--suite", choices=["smoke", "full", "public"], default="smoke")
-    p.add_argument("--backends", default="all")
+    p.add_argument("--suite", choices=["smoke", "full", "public", "compression"], default="smoke")
+    p.add_argument("--backends", default="all", help="all, cuda, or comma-separated backend names")
     p.add_argument("--threads", type=int, default=4)
     p.add_argument("--repeat", type=int, default=7)
     p.add_argument("--warmup", type=int, default=2)
@@ -35,12 +35,16 @@ def main():
     if a.repeat < 2 or a.warmup < 0 or a.threads < 1:
         p.error("repeat >= 2, warmup >= 0, threads >= 1 required")
     a.exe = a.exe.resolve(); a.generator = a.generator.resolve()
-    a.output.mkdir(parents=True, exist_ok=False)
-    a.data_dir.mkdir(parents=True, exist_ok=True)
     available = subprocess.check_output([str(a.exe), "--list-backends"], text=True).split()
     backends = available if a.backends == "all" else a.backends.split(",")
+    if a.backends == "cuda":
+        backends = [name for name in available if name.startswith("cuda-")]
+        if not any(name.endswith("-fp16") for name in backends):
+            p.error("--backends cuda requires a CUDA build with FP16 feature support")
     if any(b not in available for b in backends):
         p.error("requested backend unavailable")
+    a.output.mkdir(parents=True, exist_ok=False)
+    a.data_dir.mkdir(parents=True, exist_ok=True)
     root = pathlib.Path(__file__).resolve().parents[1]
     source_hash = hashlib.sha256()
     for folder in ("integration", "CPU", "cuda", "common", "experiments"):
@@ -58,6 +62,8 @@ def main():
     configurations = []
     if a.suite == "smoke":
         configurations = [(model, 1000, 16, "16,8", "smoke") for model in ("er", "ba", "ws")]
+    elif a.suite == "compression":
+        configurations = [("ba", 100000, f, "16,8", "feature-size") for f in (16, 128)]
     elif a.suite == "full":
         configurations += [(model, n, 16, "16,8", "graph-size") for model in ("er", "ba", "ws") for n in (10000, 100000, 1000000)]
         configurations += [("ba", 10000, f, "16,8", "feature-size") for f in (16, 64, 128)]
