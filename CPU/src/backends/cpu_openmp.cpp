@@ -115,12 +115,13 @@ RunResult run_cpu_openmp(const CSRGraph& graph, const DenseMatrix& features,
                 // 同一节点的特征按行连续存储，下标是“节点编号 * 特征数 + 特征编号”。
                 // 把来源 u 的每项特征，累加到目标 row 的相同特征位置。
                 for(std::size_t f=0;f<current.cols;++f)
-                    aggregated.values[row*current.cols+f]+=scale*current.values[u*current.cols+f];
+                    aggregated.values[row*current.cols+f] += scale*current.values[u*current.cols+f];
             }
             // mean 逐项取平均；sum 和 symmetric 保留上面各自的累加结果。
             // degree 为 0 时跳过除法，既避免除零，也保留初始化时的全零输出。
             if(degree && config.aggregation==AggregationKind::Mean)
-                for(std::size_t f=0;f<current.cols;++f) aggregated.values[row*current.cols+f]/=float(degree);
+                for(std::size_t f=0;f<current.cols;++f) 
+                    aggregated.values[row*current.cols+f]/=float(degree);
         });
 
         // 聚合的 parallel_rows 已等待全部行完成，接下来才读取聚合结果。
@@ -131,18 +132,20 @@ RunResult run_cpu_openmp(const CSRGraph& graph, const DenseMatrix& features,
             throw std::invalid_argument("output shape overflow");
         // 点积通过 += 累加，所以 next 也必须从全零开始。
         DenseMatrix next{graph.num_nodes,width,std::vector<float>(graph.num_nodes*width,0.0F)};
-        parallel_rows(static_cast<std::int64_t>(graph.num_nodes),config,[&](std::int64_t row){
+        parallel_rows( static_cast<std::int64_t>(graph.num_nodes), config, [&](std::int64_t row ){
             // k 遍历输入特征，f 遍历输出特征：
             // next[row,f] += aggregated[row,k] * weights[k,f]。
             // f 在最内层，使权重的一行和输出的一行连续访问，并复用读出的 x。
             for(std::size_t k=0;k<current.cols;++k){
                 const float x=aggregated.values[row*current.cols+k];
-                for(std::size_t f=0;f<width;++f) next.values[row*width+f]+=x*layer.weights.values[k*width+f];
+                for(std::size_t f=0;f<width;++f) 
+                    next.values[row*width+f] += x*layer.weights.values[k*width+f];
             }
             // 第三步：同一线程在自己的输出行上做 ReLU，把负数改为 0。
             // Identity 无需处理；把激活放在这里可避免再启动单独的并行循环。
             if(layer.activation==ActivationKind::ReLU)
-                for(std::size_t f=0;f<width;++f) next.values[row*width+f]=std::max(0.0F,next.values[row*width+f]);
+                for(std::size_t f=0;f<width;++f) 
+                    next.values[row*width+f]=std::max(0.0F,next.values[row*width+f]);
         });
 
         // 此刻 current、aggregated、next 同时存活，计入本层工作区峰值。
@@ -157,7 +160,9 @@ RunResult run_cpu_openmp(const CSRGraph& graph, const DenseMatrix& features,
     const auto end=Clock::now();
     RunResult result;
     result.output=std::move(current);
+    // 包含内存分配，清零与计算，但是不包括初始复制
     result.metrics.timing.compute_ms=std::chrono::duration<double,std::milli>(end-compute_start).count();
+    // 包含上面的同时还包含输入检查，初始特征复制等准备工作
     result.metrics.timing.inference_ms=std::chrono::duration<double,std::milli>(end-start).count();
     // 内存指标 = 持久输入载荷 + 最大临时工作区，不是各层工作区的简单累加。
     result.metrics.memory.host_bytes=persistent+peak;
