@@ -1,5 +1,7 @@
 # Project Q1: Graph Neural Network Inference on GPUs
 
+Member: Jinghao Mei s353434, Xinwei Zhan s364077, Lingxiao Jiang s353172
+
 ## Scope and model
 
 This project implements full-batch inference on one static graph. The model
@@ -237,11 +239,11 @@ own FP32 baseline. Both use the same aggregation mapping and dense kernel.
 
 ![FP16 divided by FP32 median latency for four CUDA mappings on BA and Cora. Ratios range from 2.00 to 5.71.](results/rtx3050-compression-focused/compression-latency.png)
 
-| Graph | Input features | Device memory saved per mapping | FP16 / FP32 median time |
-| --- | ---: | ---: | ---: |
-| Barabási–Albert, 100,000 vertices | 16 | 6.10 MiB | 2.00–4.57× |
-| Same Barabási–Albert graph | 128 | 48.83 MiB | 3.41–5.71× |
-| Cora, 2,708 vertices | 1,433 | 14.80 MiB | 2.66–3.19× |
+| Graph                             | Input features | Device memory saved per mapping | FP16 / FP32 median time |
+| --------------------------------- | -------------: | ------------------------------: | ----------------------: |
+| Barabási–Albert, 100,000 vertices |             16 |                        6.10 MiB |              2.00–4.57× |
+| Same Barabási–Albert graph        |            128 |                       48.83 MiB |              3.41–5.71× |
+| Cora, 2,708 vertices              |          1,433 |                       14.80 MiB |              2.66–3.19× |
 
 The distinction between kernel and application timing matters here. For
 vertex-centric aggregation with a tiled dense transform on BA at width 128,

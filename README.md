@@ -1,5 +1,7 @@
 # Project Q1: Graph Neural Network Inference on GPUs
 
+Member: Jinghao Mei s353434, Xinwei Zhan s364077, Lingxiao Jiang s353172
+
 The root project integrates the existing C++ CPU implementation, shared
 datasets and CUDA inference. No training is performed. See DOCUMENTATION.md
 for semantics, design decisions, timing definitions and measured results.
@@ -72,12 +74,12 @@ build/gnni_q1 --dataset graph.gnni --layers 64,32 --backend cuda-tiled-fp16 --ve
 
 CPU backends are `cpu` and `omp`. The eight GPU scenarios are:
 
-| Aggregation | Dense transform | FP32 features | Compressed FP16 features |
-| --- | --- | --- | --- |
-| Vertex | Global memory | `cuda-vertex` | `cuda-vertex-fp16` |
-| Vertex | Shared-memory tiles | `cuda-tiled` | `cuda-tiled-fp16` |
-| Edge | Global memory | `cuda-edge` | `cuda-edge-fp16` |
-| Edge | Shared-memory tiles | `cuda-edge-tiled` | `cuda-edge-tiled-fp16` |
+| Aggregation | Dense transform     | FP32 features     | Compressed FP16 features |
+| ----------- | ------------------- | ----------------- | ------------------------ |
+| Vertex      | Global memory       | `cuda-vertex`     | `cuda-vertex-fp16`       |
+| Vertex      | Shared-memory tiles | `cuda-tiled`      | `cuda-tiled-fp16`        |
+| Edge        | Global memory       | `cuda-edge`       | `cuda-edge-fp16`         |
+| Edge        | Shared-memory tiles | `cuda-edge-tiled` | `cuda-edge-tiled-fp16`   |
 
 FP16 halves the bytes per stored feature. All eight use FP32 weights and
 accumulation. Each compressed run packs the input, stores layer outputs in
