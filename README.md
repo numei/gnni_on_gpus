@@ -67,6 +67,7 @@ python common/tools/prepare_public_dataset.py ogbn-arxiv --make-undirected --sel
 build/gnni_q1 --dataset graph.gnni --layers 64,32 --backend cpu --verify
 build/gnni_q1 --dataset graph.gnni --layers 64,32 --backend omp --threads 4 --schedule guided --verify
 build/gnni_q1 --dataset graph.gnni --layers 64,32 --backend cuda-tiled --verify
+build/gnni_q1 --dataset graph.gnni --layers 64,32 --backend cuda-tiled-fp16 --verify
 ```
 
 CPU backends are `cpu` and `omp`. The eight GPU scenarios are:
@@ -80,7 +81,9 @@ CPU backends are `cpu` and `omp`. The eight GPU scenarios are:
 
 FP16 halves the bytes per stored feature. All eight use FP32 weights and
 accumulation. Each compressed run packs the input, stores layer outputs in
-FP16, and returns FP32 values to the caller.
+FP16, and returns FP32 values to the caller. Compression changes the scalar
+precision, not the matrix shape: features remain a dense row-major N x F
+array rather than a sparse or variable-length encoding.
 
 Use --list-backends to list compiled backends. GPU hardware availability is
 checked when a GPU context is created, not by --list-backends.

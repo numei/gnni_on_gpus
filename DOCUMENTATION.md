@@ -76,8 +76,11 @@ storage precision. The FP16 variants round the input and each layer output
 to binary16 (round to nearest, ties to even). Kernels convert feature loads
 to FP32 and use FP32 for aggregation, accumulation and weights. The input
 file and returned matrix use FP32. FP16 reduces the representable range and
-can overflow for sufficiently large activations. The baseline coalesces accesses across
-adjacent features, although irregular neighbor indices limit locality.
+can overflow for sufficiently large activations. This is precision-based
+compression: it preserves the dense row-major `N x F` layout and halves the
+bytes per stored feature; it does not introduce sparse indices, codebooks or
+variable-length records. The baseline coalesces accesses across adjacent
+features, although irregular neighbor indices limit locality.
 Edge parallelism distributes long rows across threads and may improve degree
 imbalance. Its costs are atomic contention, zeroing the aggregate buffer,
 an additional E-entry destination array and nondeterministic summation order.
